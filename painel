@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICC - Sistema de Logística Integrado</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-body:    #10141a;
+      --bg-panel:   #171d26;
+      --bg-panel-2: #1c232e;
+      --border-soft:#2a3240;
+      --primary-red:#d9564b;
+      --primary-blue:#4a90d9;
+      --primary-green:#34c281;
+      --nav-bg:     #171d26;
+      --text-gold:  #d4af37;
+      --text-gold-s:#e0c46a;
+      --text-main:  #e9edf2;
+      --text-dim:   #8894a3;
+      --input-bg:   #0d1117;
+      --radius:     8px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,Roboto,sans-serif}
+    html{color-scheme:dark}
+    body{background:var(--bg-body);color:var(--text-main);display:flex;flex-direction:column;align-items:center;min-height:100vh}
+
+    /* ── HEADER ── */
+    header{width:100%;background:#fff;padding:22px 0 16px;text-align:center;box-shadow:0 2px 20px rgba(0,0,0,.5);position:relative}
+    header::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--primary-green),var(--text-gold))}
+    .logo-area img{width:150px;display:block;margin:0 auto}
+    .logo-area .tagline{font-size:10.5px;color:#7a7a7a;text-transform:uppercase;letter-spacing:2px;margin-top:2px;font-weight:500}
+    .live-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--primary-green);text-transform:uppercase;margin-top:10px;letter-spacing:1px;background:rgba(52,194,129,.08);padding:4px 12px;border-radius:20px}
+    .live-dot{width:8px;height:8px;border-radius:50%;background:var(--primary-green);box-shadow:0 0 6px var(--primary-green);animation:pulse 1.6s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    /* ── NAV ── */
+    nav{width:100%;background:var(--nav-bg);display:flex;justify-content:center;gap:4px;padding:8px 10px;overflow-x:auto;border-bottom:1px solid var(--border-soft)}
+    nav button{background:transparent;border:1px solid transparent;color:var(--text-dim);padding:10px 16px;cursor:pointer;font-size:11.5px;font-weight:700;text-transform:uppercase;transition:.2s;white-space:nowrap;border-radius:6px;letter-spacing:.5px}
+    nav button:hover{color:var(--text-main);background:rgba(255,255,255,.05)}
+    nav button.active{color:#14181f;background:var(--text-gold);border-color:var(--text-gold)}
+    nav button.locked-nav::after{content:' 🔒';font-size:9px}
+
+    /* ── MAIN ── */
+    main{width:100%;max-width:1000px;margin:30px 10px;padding:0 4px}
+    .sub-title{color:var(--text-gold);font-size:13px;font-weight:700;letter-spacing:1px;margin-bottom:5px}
+    h2{font-size:26px;text-transform:uppercase;margin-bottom:5px;color:#fff;letter-spacing:.5px}
+    .description{color:var(--text-dim);font-size:13px;margin-bottom:20px}
+
+    .card{background:var(--bg-panel);border:1px solid var(--border-soft);border-left:3px solid var(--text-gold);border-radius:var(--radius);padding:25px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+    .card-section-title{font-size:11px;font-weight:700;color:var(--text-gold-s);margin-bottom:15px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.5px}
+
+    /* ── TORRE ── */
+    .torre-box{background:var(--bg-panel-2);border:1px solid var(--primary-blue);border-radius:var(--radius);padding:15px;margin-bottom:20px;grid-column:span 2}
+    .torre-box label{color:var(--primary-blue);font-size:12px;font-weight:700;display:block;margin-bottom:8px;letter-spacing:.5px}
+    .reserva-info{font-size:11px;color:var(--primary-green);margin-top:8px;display:none}
+    .reserva-info.show{display:block}
+
+    /* ── AUTO PREVIEW (dados puxados automaticamente da torre) ── */
+    .auto-preview{grid-column:span 2;background:var(--bg-panel-2);border:1px dashed var(--border-soft);border-radius:var(--radius);padding:14px 16px;margin-bottom:6px;display:none}
+    .auto-preview.show{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+    .auto-preview .ap-item{display:flex;flex-direction:column;gap:2px}
+    .auto-preview .ap-lbl{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+    .auto-preview .ap-val{font-size:13px;color:var(--text-gold-s);font-weight:600}
+    .auto-preview .ap-val.empty{color:var(--text-dim);font-weight:400;font-style:italic}
+    .auto-preview-title{grid-column:1/-1;font-size:10.5px;font-weight:700;color:var(--primary-blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+
+    /* ── FORM ── */
+    .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+    .full-width{grid-column:span 2}
+    .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important}
+    .field-group{display:flex;flex-direction:column;gap:5px}
+    label{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px}
+    input,select{padding:10px;border:1px solid var(--border-soft);border-radius:5px;font-size:14px;background:var(--input-bg);color:var(--text-main);width:100%}
+    input:focus,select:focus{outline:none;border-color:var(--text-gold)}
+    select option{background:var(--input-bg);color:var(--text-main)}
+    .field-required label::after{content:' *';color:var(--primary-red)}
+
+    /* ── KPI CARDS ── */
+    .kpi-card{background:#fff;border:1px solid #ddd;border-left:4px solid var(--primary-red);border-radius:var(--radius);padding:20px 15px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+    .kpi-icon{font-size:20px;margin-bottom:8px}
+    .kpi-value{font-size:30px;font-weight:700;color:var(--primary-red);line-height:1}
+    .kpi-label{font-size:11px;color:#666;text-transform:uppercase;margin-top:8px;letter-spacing:.5px}
+    .kpi-aviso{grid-column:1/-1;color:var(--primary-red);font-weight:700;font-size:13px;text-align:center;padding:10px}
+    .kpi-note{grid-column:1/-1;background:var(--bg-panel-2);border:1px solid var(--text-gold);color:var(--text-gold-s);font-size:11.5px;padding:10px 14px;border-radius:6px;margin-bottom:4px}
+    .kpi-chart-wrap{grid-column:1/-1;background:#fff;border:1px solid #ddd;border-radius:var(--radius);padding:20px;margin-top:20px;height:340px}
+    .kpi-chart-wrap canvas{max-height:270px}
+
+    /* ── RESUMO BOX ── */
+    .kpi-resumo-box{grid-column:1/-1;background:var(--bg-panel-2);border:1px solid var(--primary-green);border-radius:var(--radius);padding:18px;margin-top:20px}
+    .kpi-resumo-box label{color:var(--primary-green);font-size:12px;font-weight:700;display:block;margin-bottom:10px;letter-spacing:.5px}
+    .kpi-resumo-box textarea{width:100%;min-height:140px;background:var(--input-bg);color:var(--text-main);border:1px solid var(--border-soft);border-radius:6px;padding:10px;font-size:12px;font-family:'Courier New',monospace;resize:vertical;margin-bottom:10px}
+    .resumo-periodo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    .resumo-status{font-size:11px;color:var(--text-dim);margin-top:8px}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn-wpp{background:var(--primary-green);color:#06231a;border:none;padding:12px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;transition:.2s}
+    .btn-wpp:hover{filter:brightness(1.1)}
+    .btn-wpp.alt{background:var(--text-gold);color:#2a2205}
+
+    /* ── TIME BOX ── */
+    .time-control-box{background:var(--bg-panel-2);border:1px solid var(--border-soft);border-radius:6px;padding:15px;margin-top:20px}
+    .time-control-box.locked{border-color:var(--primary-green)}
+    .time-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+    .btn-current-time{background:var(--primary-blue);color:#fff;border:none;padding:10px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700;transition:.2s;width:100%}
+    .btn-current-time:hover{filter:brightness(1.1)}
+    .btn-current-time:disabled{background:#3a4250;cursor:not-allowed}
+    input[readonly]{background:#0a0d12;color:var(--primary-green);font-weight:700;cursor:not-allowed}
+
+    /* ── SUBMIT ── */
+    .btn-submit{width:100%;background:var(--primary-red);color:#fff;border:none;padding:15px;margin-top:25px;border-radius:6px;font-weight:700;font-size:16px;text-transform:uppercase;cursor:pointer;transition:.2s;letter-spacing:.5px}
+    .btn-submit:hover{filter:brightness(1.1)}
+    .btn-submit:disabled{background:#444;color:#888;cursor:not-allowed}
+    .form-alert{grid-column:1/-1;background:rgba(217,86,75,.12);border:1px solid var(--primary-red);color:#f0a99e;font-size:12px;font-weight:600;padding:10px 14px;border-radius:6px;display:none}
+    .form-alert.show{display:block}
+
+    /* ── HISTORY ── */
+    .history-card{background:var(--bg-panel);border:1px solid var(--border-soft);border-left:3px solid var(--text-gold);border-radius:var(--radius);margin-top:30px;padding:20px;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+    table th{background:#0d1117;color:var(--text-gold-s)!important;padding:10px;text-align:left;text-transform:uppercase;letter-spacing:.4px}
+    table td{padding:10px;border-bottom:1px solid var(--border-soft);color:var(--text-main)!important;background:var(--bg-panel)}
+    table tbody tr:nth-child(even) td{background:var(--bg-panel-2)}
+
+    /* ── APROVAÇÕES INLINE ── */
+    #aprovacoes-inline{display:none}
+    .aprov-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border-soft);padding-bottom:4px;flex-wrap:wrap}
+    .aprov-tab{background:transparent;border:none;color:var(--text-dim);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;cursor:pointer;border-radius:6px 6px 0 0;transition:.15s;border-bottom:2px solid transparent;margin-bottom:-2px}
+    .aprov-tab:hover{color:var(--text-main);background:rgba(255,255,255,.04)}
+    .aprov-tab.active{color:var(--text-gold);border-bottom-color:var(--text-gold)}
+
+    .aprov-card{background:var(--bg-panel-2);border:1px solid var(--border-soft);border-left:3px solid var(--text-gold);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+    .aprov-card h3{font-size:10px;font-weight:700;color:var(--text-gold-s);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
+
+    .aprov-filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end}
+    .aprov-field{display:flex;flex-direction:column;gap:4px}
+    .aprov-field label{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
+    .aprov-field select,.aprov-field input{padding:8px 10px;border:1px solid var(--border-soft);border-radius:5px;background:var(--input-bg);color:var(--text-main);font-size:12px;min-width:130px}
+    .aprov-field select:focus,.aprov-field input:focus{outline:2px solid var(--text-gold);border-color:var(--text-gold)}
+
+    .aprov-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .aprov-kpi{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px;text-align:center}
+    .aprov-kpi-val{font-size:26px;font-weight:700;line-height:1}
+    .aprov-kpi-lbl{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
+    .aprov-kpi.gold .aprov-kpi-val{color:var(--text-gold)}
+    .aprov-kpi.green .aprov-kpi-val{color:var(--primary-green)}
+    .aprov-kpi.red .aprov-kpi-val{color:var(--primary-red)}
+    .aprov-kpi.blue .aprov-kpi-val{color:var(--primary-blue)}
+
+    .aprov-btn{border:none;border-radius:5px;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.07em;padding:8px 12px;cursor:pointer;transition:.15s}
+    .aprov-btn:hover{filter:brightness(1.1)}
+    .aprov-btn.gold{background:var(--text-gold);color:#111}
+    .aprov-btn.green{background:var(--primary-green);color:#06231a}
+    .aprov-btn.red{background:var(--primary-red);color:#fff}
+    .aprov-btn.blue{background:var(--primary-blue);color:#fff}
+    .aprov-btn.ghost{background:transparent;border:1px solid var(--border-soft);color:var(--text-dim)}
+    .aprov-btn.ghost:hover{color:var(--text-main);border-color:var(--text-dim)}
+
+    .aprov-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
+    .ab-pend{background:rgba(212,175,55,.2);color:var(--text-gold)}
+    .ab-ok{background:rgba(52,194,129,.2);color:var(--primary-green)}
+    .ab-no{background:rgba(217,86,75,.2);color:var(--primary-red)}
+    .ab-carga{background:rgba(217,86,75,.15);color:#f0806e}
+    .ab-sep{background:rgba(74,144,217,.15);color:#7ab8f0}
+
+    .aprov-table-wrap{overflow-x:auto}
+    .aprov-table{width:100%;border-collapse:collapse;font-size:11.5px}
+    .aprov-table th{background:#0d1117;color:var(--text-gold-s);padding:9px 8px;text-align:left;text-transform:uppercase;font-size:10px;letter-spacing:.05em;font-weight:700}
+    .aprov-table td{padding:8px;border-bottom:1px solid var(--border-soft);color:var(--text-main)}
+    .aprov-table tbody tr:nth-child(even) td{background:#141b24}
+    .aprov-table tbody tr:hover td{background:rgba(212,175,55,.04)}
+
+    .aprov-empty{text-align:center;padding:20px;color:var(--text-dim);font-size:12px}
+    .aprov-spin{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid var(--border-soft);border-top-color:var(--text-gold);animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .aprov-status{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:6px;min-height:16px;margin-top:8px}
+
+    /* ── REPORT BOX ── */
+    .rel-box{background:var(--bg-panel-2);border:1px solid var(--border-soft);border-left:3px solid var(--primary-green);border-radius:var(--radius);padding:18px;margin-top:16px}
+    .rel-box h3{font-size:10px;font-weight:700;color:var(--primary-green);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
+    .rel-box textarea{width:100%;min-height:200px;background:var(--input-bg);color:var(--text-main);border:1px solid var(--border-soft);border-radius:6px;padding:10px;font-family:'Courier New',monospace;font-size:11.5px;resize:vertical;margin-bottom:10px}
+    .rel-box textarea:focus{outline:2px solid var(--text-gold)}
+
+    /* ── MODAL ── */
+    .aprov-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999}
+    .aprov-modal{background:var(--bg-panel);border:1px solid var(--border-soft);border-radius:var(--radius);padding:24px;max-width:480px;width:90%;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+    .aprov-modal-title{font-size:15px;font-weight:700;color:var(--text-gold);margin-bottom:16px}
+    .aprov-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+    .aprov-mf label{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px}
+    .aprov-mf .val{font-size:13px;font-weight:600;color:var(--text-main)}
+    .aprov-modal-actions{display:flex;gap:10px;margin-top:18px}
+    .aprov-modal-actions .aprov-btn{flex:1;padding:11px}
+
+    /* ── OVERLAY ── */
+    #loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:none;justify-content:center;align-items:center;color:var(--text-gold);font-weight:700;z-index:9999}
+
+    /* ── SUPERVISOR LOCK (área protegida por senha: KPI / Aprovações) ── */
+    #sup-lock-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:10000}
+    #sup-lock{max-width:380px;width:90%;background:var(--bg-panel);border:1px solid var(--border-soft);border-top:3px solid var(--text-gold);border-radius:var(--radius);padding:34px 28px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+    #sup-lock .icon{font-size:36px;margin-bottom:10px}
+    #sup-lock h2{font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;color:#fff}
+    #sup-lock p{color:var(--text-dim);font-size:12px;margin-bottom:20px}
+    #sup-lock input{width:100%;font-size:18px;text-align:center;letter-spacing:.4em;padding:11px;border:1px solid var(--border-soft);border-radius:6px;background:var(--input-bg);color:var(--text-main);margin-bottom:12px}
+    #sup-lock input:focus{outline:2px solid var(--text-gold);border-color:var(--text-gold)}
+    #sup-lock .aprov-btn{width:100%;padding:12px}
+    #sup-lock-err{color:#E8A798;font-size:12px;margin-top:10px;min-height:16px}
+    #sup-lock .cancel-link{display:block;margin-top:14px;color:var(--text-dim);font-size:11px;cursor:pointer;text-decoration:underline}
+
+    @media(max-width:900px){main{max-width:100%;padding:0 4px}}
+    @media(max-width:600px){
+      .form-grid,.time-grid,.resumo-periodo-grid,.aprov-filter-row{grid-template-columns:1fr}
+      .full-width,.torre-box,.auto-preview{grid-column:span 1}
+      h2{font-size:21px}
+      nav{justify-content:flex-start}
+      .kpi-value{font-size:24px}
+      .aprov-kpi-row{grid-template-columns:repeat(2,1fr)}
+      .aprov-modal-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay">Processando... Aguarde.</div>
+
+<!-- LOCK DE ÁREA SUPERVISOR (protege KPI e APROVAÇÕES) -->
+<div id="sup-lock-bg">
+  <div id="sup-lock">
+    <div class="icon">🔐</div>
+    <h2>Área do Supervisor</h2>
+    <p>Somente gestores autorizados. Digite a senha para continuar.</p>
+    <input type="password" id="sup-lock-input" placeholder="••••" maxlength="12" inputmode="numeric">
+    <button class="aprov-btn gold" onclick="trySupUnlock()">Entrar</button>
+    <div id="sup-lock-err"></div>
+    <span class="cancel-link" onclick="cancelSupLock()">Cancelar</span>
+  </div>
+</div>
+
+<header>
+  <div class="logo-area">
+    <img alt="ICC" src="https://blogger.googleusercontent.com/img/a/AVvXsEh9o7gVmVyhlIUhaO_N9UPrs3m4XZW9SDmy-fi8sELhnsk0BWuzOHSBhnz2ExxTZhHtu5NKCSgknF24H3S_beVYS9X5phbqx4i0xWjiEDHgCM20IFY1w6IgER9-F0W9J48wzVxc_h0uq7JuwzC4lazzh4asYhjSnWq9ZLtE7OtI770Y5F3d0H8PlMyJDhGH">
+    <div class="live-badge"><span class="live-dot"></span> AO VIVO • <span id="relogio">--:--:--</span></div>
+  </div>
+</header>
+
+<nav id="main-nav">
+  <button class="active" onclick="switchPage('CargaDescarga',this)">🚚 CARGA / DESCARGA</button>
+  <button class="locked-nav" onclick="requestSupervisorAccess('KPI',this)">📊 KPI</button>
+  <button class="locked-nav" onclick="requestSupervisorAccess('Aprovacoes',this)">✅ APROVAÇÕES</button>
+  <button onclick="switchPage('Separacao',this)">📦 SEPARAÇÃO</button>
+  <button onclick="switchPage('SeparacaoOP',this)">📦 SEPARAÇÃO OP</button>
+  <button onclick="switchPage('RecebimentoOP',this)">📥 RECEBIMENTO OP</button>
+  <button onclick="switchPage('CadastroConferentes',this)">👤 CONFERENTES</button>
+  <button onclick="switchPage('CadastroOperadores',this)">👷 OPERADORES</button>
+  <button id="sup-logout-btn" style="display:none;color:var(--primary-red)" onclick="doSupLogout()">🔒 Bloquear Supervisor</button>
+</nav>
+
+<main>
+  <p class="sub-title">LOGÍSTICA • ICC</p>
+  <h2 id="page-title">CARGA / DESCARGA</h2>
+  <p class="description" id="page-desc">Preenchimento dos campos do processo.</p>
+
+  <div class="card" id="main-card">
+    <div class="card-section-title" id="process-section-title">✨ Campos do Processo</div>
+    <form class="form-grid" id="main-form"></form>
+  </div>
+
+  <!-- APROVAÇÕES INLINE -->
+  <div id="aprovacoes-inline">
+    <div class="aprov-tabs">
+      <button class="aprov-tab active" onclick="showAprovTab('aprov-tab-hoje',this)">📅 Operações de Hoje</button>
+      <button class="aprov-tab" onclick="showAprovTab('aprov-tab-hist',this)">🗂️ Histórico</button>
+      <button class="aprov-tab" onclick="showAprovTab('aprov-tab-rel',this)">📄 Relatório</button>
+    </div>
+
+    <!-- HOJE -->
+    <div id="aprov-tab-hoje">
+      <div class="aprov-kpi-row" id="aprov-kpi-hoje"></div>
+      <div class="aprov-card">
+        <h3>🔍 Filtros</h3>
+        <div class="aprov-filter-row">
+          <div class="aprov-field">
+            <label>Processo</label>
+            <select id="af-tipo">
+              <option value="">Todos</option>
+              <option>CARREGAMENTO</option><option>DESCARGA</option>
+              <option>SEPARAÇÃO</option><option>SEPARAÇÃO OP</option><option>RECEBIMENTO OP</option>
+            </select>
+          </div>
+          <div class="aprov-field">
+            <label>Conferente</label>
+            <select id="af-conf"><option value="">Todos</option></select>
+          </div>
+          <div class="aprov-field">
+            <label>Status</label>
+            <select id="af-status">
+              <option value="PENDENTE">Pendente</option>
+              <option value="">Todos</option>
+              <option value="APROVADO">Aprovado</option>
+              <option value="REPROVADO">Reprovado</option>
+            </select>
+          </div>
+          <button class="aprov-btn gold" onclick="aprovLoadData()">🔄 Atualizar</button>
+          <button class="aprov-btn ghost" onclick="aprovExportCSV()">📥 CSV</button>
+        </div>
+        <div class="aprov-table-wrap">
+          <table class="aprov-table">
+            <thead><tr>
+              <th>Processo</th><th>Conferente</th><th>Operador</th>
+              <th>Horário</th><th>Detalhe</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="aprov-tbody-hoje"><tr><td colspan="7" class="aprov-empty">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="aprov-status" id="aprov-status-hoje"></div>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div id="aprov-tab-hist" style="display:none">
+      <div class="aprov-card">
+        <h3>🗂️ Consultar por Data</h3>
+        <div class="aprov-filter-row">
+          <div class="aprov-field"><label>De</label><input type="date" id="af-hist-ini"></div>
+          <div class="aprov-field"><label>Até</label><input type="date" id="af-hist-fim"></div>
+          <div class="aprov-field">
+            <label>Conferente</label>
+            <select id="af-hist-conf"><option value="">Todos</option></select>
+          </div>
+          <div class="aprov-field">
+            <label>Status</label>
+            <select id="af-hist-status">
+              <option value="">Todos</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="APROVADO">Aprovado</option>
+              <option value="REPROVADO">Reprovado</option>
+            </select>
+          </div>
+          <button class="aprov-btn gold" onclick="aprovRenderHist()">🔍 Buscar</button>
+        </div>
+        <div class="aprov-table-wrap">
+          <table class="aprov-table">
+            <thead><tr>
+              <th>Data</th><th>Processo</th><th>Conferente</th><th>Operador</th>
+              <th>Horário</th><th>Detalhe</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="aprov-tbody-hist"><tr><td colspan="8" class="aprov-empty">Escolha um período e clique em Buscar.</td></tr></tbody>
+          </table>
+        </div>
+        <div id="aprov-hist-count" style="font-size:11px;color:var(--text-dim);margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- RELATÓRIO -->
+    <div id="aprov-tab-rel" style="display:none">
+      <div class="aprov-card">
+        <h3>📄 Parâmetros do Relatório</h3>
+        <div class="aprov-filter-row">
+          <div class="aprov-field"><label>De</label><input type="date" id="af-rel-ini"></div>
+          <div class="aprov-field"><label>Até</label><input type="date" id="af-rel-fim"></div>
+          <div class="aprov-field">
+            <label>Conferente</label>
+            <select id="af-rel-conf"><option value="">Todos</option></select>
+          </div>
+          <div class="aprov-field">
+            <label>Status</label>
+            <select id="af-rel-status">
+              <option value="APROVADO">Aprovados</option>
+              <option value="">Todos</option>
+              <option value="PENDENTE">Pendentes</option>
+              <option value="REPROVADO">Reprovados</option>
+            </select>
+          </div>
+          <button class="aprov-btn gold" onclick="aprovBuildReport()">🔄 Gerar</button>
+        </div>
+      </div>
+
+      <div class="rel-box">
+        <h3>📋 Prévia</h3>
+        <textarea id="aprov-rel-txt" readonly placeholder="Configure os parâmetros e clique em Gerar..."></textarea>
+        <div class="btn-row">
+          <button class="aprov-btn green" onclick="aprovSendWA()">📲 WhatsApp</button>
+          <button class="aprov-btn blue" onclick="aprovExportRelCSV()">📥 CSV</button>
+          <button class="aprov-btn ghost" onclick="aprovCopyRel()">📋 Copiar</button>
+        </div>
+        <div class="aprov-status" id="aprov-rel-status"></div>
+      </div>
+    </div>
+
+  </div><!-- /aprovacoes-inline -->
+
+  <div class="history-card" id="history-section">
+    <div class="card-section-title">📋 Últimos Registros</div>
+    <table id="history-table">
+      <thead><tr id="table-head"></tr></thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</main>
+
+<div id="aprov-modal-container"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const WEB_APP_URL   = 'https://script.google.com/macros/s/AKfycby42Jk6yMfHnQ9KldGurie5l6nohWwHZ8liqIGsHkPZPkZGPDBnsWQED6q9raxSVNgL/exec';
+const TORRE_URL     = 'https://script.google.com/macros/s/AKfycbyTuMzq2A0K_BBmdRCuU6O0iWDyFnjck18OzneeAQw7Il0n7PVBifcgBHThyFQGpHjzlQ/exec';
+const WA_PHONE      = '5514998639506';
+const WA_APIKEY     = '3711022';
+const RESUMO_HORA   = '17:30';
+const RESERVA_MIN   = 20;
+
+// ── SENHA DO SUPERVISOR (protege KPI e APROVAÇÕES) ──────
+const SENHA_SUPERVISOR = '9116';
+const SUP_SESSAO_KEY   = 'icc_supervisor_sessao';
+let pendingAba = null;
+let pendingBtn = null;
+
+let currentAba = 'CargaDescarga';
+let masterData = {};
+let torreData  = null;
+let chartQtdConf=null, chartTempoConf=null, chartStatusAprov=null;
+
+// ── APROVAÇÕES STATE ──────────────────────────────────────
+let aprovRecords    = [];
+let aprovMap        = {};
+
+// ── CARGA/DESCARGA AUTOMÁTICA — estado do caminhão selecionado ──
+let camSelecionado = null; // guarda todos os dados puxados da Torre para o envio
+
+// ── SESSION ──────────────────────────────────────────────
+let sessionId = localStorage.getItem('icc_sessionId');
+if(!sessionId){ sessionId='S'+Date.now()+Math.random().toString(36).slice(2,8); localStorage.setItem('icc_sessionId',sessionId); }
+let reservasLocais = {};
+
+// ── SUPERVISOR LOCK ────────────────────────────────────────
+function isSupervisorUnlocked(){
+  try{ return sessionStorage.getItem(SUP_SESSAO_KEY)==='1'; }catch(e){ return false; }
+}
+function requestSupervisorAccess(aba, btn){
+  if(isSupervisorUnlocked()){
+    switchPage(aba, btn);
+    return;
+  }
+  pendingAba = aba; pendingBtn = btn;
+  document.getElementById('sup-lock-err').textContent='';
+  document.getElementById('sup-lock-input').value='';
+  document.getElementById('sup-lock-bg').style.display='flex';
+  document.getElementById('sup-lock-input').focus();
+}
+function trySupUnlock(){
+  const v = document.getElementById('sup-lock-input').value;
+  if(v === SENHA_SUPERVISOR){
+    try{ sessionStorage.setItem(SUP_SESSAO_KEY,'1'); }catch(e){}
+    document.getElementById('sup-lock-bg').style.display='none';
+    document.getElementById('sup-logout-btn').style.display='';
+    if(pendingAba) switchPage(pendingAba, pendingBtn);
+    pendingAba=null; pendingBtn=null;
+  } else {
+    document.getElementById('sup-lock-err').textContent='Senha incorreta.';
+    document.getElementById('sup-lock-input').value='';
+    document.getElementById('sup-lock-input').focus();
+  }
+}
+function cancelSupLock(){
+  document.getElementById('sup-lock-bg').style.display='none';
+  pendingAba=null; pendingBtn=null;
+}
+document.addEventListener('DOMContentLoaded', function(){
+  const inp = document.getElementById('sup-lock-input');
+  if(inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') trySupUnlock(); });
+  if(isSupervisorUnlocked()) document.getElementById('sup-logout-btn').style.display='';
+});
+function doSupLogout(){
+  try{ sessionStorage.removeItem(SUP_SESSAO_KEY); }catch(e){}
+  document.getElementById('sup-logout-btn').style.display='none';
+  // se estiver numa área protegida, volta para Carga/Descarga
+  if(currentAba==='KPI'||currentAba==='Aprovacoes'){
+    switchPage('CargaDescarga', document.querySelector('#main-nav button'));
+  }
+}
+
+// ── SCHEMAS ──────────────────────────────────────────────
+// CargaDescarga agora só pede: Posição/Baia, Conferente, Operador, Romaneio.
+// Tudo mais (tipo, motorista, NF, cliente, datas/horários) vem automático da Torre.
+const SCHEMAS = {
+  CargaDescarga:[
+    {id:'baia',label:'Posição / Baia',type:'text',required:true},
+    {id:'conferente',label:'Conferente',type:'select',required:true},
+    {id:'operador',label:'Operador',type:'select',required:true},
+    {id:'romaneio',label:'Romaneio',type:'text',required:true}
+  ],
+  Separacao:[
+    {id:'conferente',label:'Conferente',type:'select'},
+    {id:'operador',label:'Operador',type:'select'},
+    {id:'baia',label:'Baia',type:'text'},
+    {id:'romaneio',label:'Romaneio',type:'text'},
+    {id:'status',label:'Status',type:'select',full:true,options:['Em Separação','Concluído','Erro']}
+  ],
+  SeparacaoOP:[
+    {id:'conferente',label:'Conferente',type:'select'},
+    {id:'operador',label:'Operador',type:'select'},
+    {id:'romaneio',label:'Romaneio',type:'text'},
+    {id:'quantidade',label:'Quantidade',type:'number'}
+  ],
+  RecebimentoOP:[
+    {id:'conferente',label:'Conferente',type:'select'},
+    {id:'operador',label:'Operador',type:'select'},
+    {id:'baia',label:'Baia de Recebimento',type:'text'},
+    {id:'quantidade',label:'Quantidade',type:'number'}
+  ],
+  CadastroConferentes:[{id:'nome',label:'Nome do Conferente',type:'text',full:true}],
+  CadastroOperadores:[{id:'nome',label:'Nome do Operador',type:'text',full:true}]
+};
+
+// Campos que na aba CargaDescarga são preenchidos 100% automaticamente
+// pela Torre de Controle (não aparecem como input editável no formulário,
+// mas continuam sendo enviados para a planilha).
+const CAMPOS_AUTO_CARGA = ['tipo','motorista','nf','cliente'];
+
+// ── INIT ─────────────────────────────────────────────────
+window.onload = function(){
+  carregarCacheLocal();
+  carregarReservasLocais();
+  if(isSupervisorUnlocked()) document.getElementById('sup-logout-btn').style.display='';
+  switchPage('CargaDescarga', document.querySelector('#main-nav button'));
+  carregarDadosIniciais();
+  atualizarRelogio();
+  setInterval(atualizarRelogio,1000);
+  setInterval(atualizarTorreSilencioso,20000);
+  setInterval(verificarResumoAutomatico,30000);
+
+  const hoje = new Date().toISOString().split('T')[0];
+  ['af-hist-ini','af-hist-fim','af-rel-ini','af-rel-fim'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value=hoje;
+  });
+};
+
+function atualizarRelogio(){
+  const el=document.getElementById('relogio');
+  if(el) el.textContent=new Date().toLocaleTimeString('pt-BR');
+}
+
+// ── CACHE ────────────────────────────────────────────────
+function carregarCacheLocal(){
+  try{
+    const cm=localStorage.getItem('cache_masterData');
+    const ct=localStorage.getItem('cache_torreData');
+    if(cm) masterData=JSON.parse(cm);
+    if(ct) torreData=JSON.parse(ct);
+  }catch(e){}
+}
+function salvarCacheLocal(){
+  try{
+    if(masterData) localStorage.setItem('cache_masterData',JSON.stringify(masterData));
+    if(torreData) localStorage.setItem('cache_torreData',JSON.stringify(torreData));
+  }catch(e){}
+}
+
+// ── RESERVAS ─────────────────────────────────────────────
+function carregarReservasLocais(){
+  try{ reservasLocais=JSON.parse(localStorage.getItem('icc_reservas')||'{}'); }catch(e){ reservasLocais={}; }
+  limparReservasExpiradas();
+}
+function salvarReservasLocais(){ try{ localStorage.setItem('icc_reservas',JSON.stringify(reservasLocais)); }catch(e){} }
+function limparReservasExpiradas(){
+  const agora=Date.now();
+  Object.keys(reservasLocais).forEach(k=>{ if(agora-reservasLocais[k]>RESERVA_MIN*60000) delete reservasLocais[k]; });
+}
+function reservarCaminhao(chave){
+  if(!chave) return;
+  reservasLocais[chave]=Date.now();
+  salvarReservasLocais();
+  fetch(WEB_APP_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({_aba:'Reservas',chave,sessionId,timestamp:new Date().toISOString()})}).catch(()=>{});
+}
+function chaveReservadaPorOutro(chave){
+  const lista=(masterData&&masterData.Reservas)||[];
+  const agora=Date.now();
+  return lista.some(r=>{
+    const t=new Date(r.timestamp).getTime();
+    const exp=isNaN(t)||(agora-t)>RESERVA_MIN*60000;
+    return r.chave===chave&&r.sessionId!==sessionId&&!exp;
+  });
+}
+
+// ── HELPERS ──────────────────────────────────────────────
+function hashStr(str){
+  let h=5381;
+  for(let i=0;i<str.length;i++){ h=((h<<5)+h)+str.charCodeAt(i); h=h&h; }
+  return (h>>>0).toString(36);
+}
+function normKey(v){
+  return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_\-./]/g,'');
+}
+function getVal(r,keys){
+  if(!r) return '';
+  const list=Array.isArray(keys)?keys:[keys];
+  const map={};
+  Object.keys(r).forEach(k=>{ map[normKey(k)]=r[k]; });
+  for(const k of list){
+    const nk=normKey(k);
+    const found=map[nk]!==undefined?map[nk]:r[k];
+    if(found!==undefined&&found!==null&&String(found).trim()!=='') return String(found).trim();
+  }
+  return '';
+}
+
+const ABA_NOME={carga:'CargaDescarga',separacao:'Separacao',separacaoOp:'SeparacaoOP',recebimentoOp:'RecebimentoOP'};
+
+function gerarIdAprov(proc, r){
+  const aba=ABA_NOME[proc]||proc;
+  const chave=[
+    aba,
+    getVal(r,['data'])||'',
+    getVal(r,['conferente'])||'',
+    getVal(r,['operador'])||'',
+    getVal(r,['horainicial','hora_inicial','hora inicial'])||'',
+    getVal(r,['romaneio'])||getVal(r,['nf'])||getVal(r,['baia'])||getVal(r,['quantidade'])||''
+  ].join('|');
+  return hashStr(chave);
+}
+
+function normalizeTipo(t,proc){
+  const lo=String(t||proc||'').toLowerCase();
+  if(lo.includes('separa')){ return lo.includes('op')?'SEPARAÇÃO OP':'SEPARAÇÃO'; }
+  if(lo.includes('receb')) return 'RECEBIMENTO OP';
+  if(lo.includes('descarga')) return 'DESCARGA';
+  if(lo.includes('carga')) return 'CARREGAMENTO';
+  return (t||proc||'').toUpperCase();
+}
+
+function parseMin(data,hi,hf){
+  if(!data||!hi||!hf) return null;
+  const dI=new Date(data+'T'+hi), dF=new Date(data+'T'+hf);
+  let d=(dF-dI)/60000;
+  if(isNaN(d)) return null;
+  if(d<0) d+=1440;
+  return(d>=0&&d<1440)?d:null;
+}
+
+function getTodayStr(){ return new Date().toISOString().split('T')[0]; }
+
+// ── LOAD DATA ────────────────────────────────────────────
+let diagInfo = { ok:false, msg:'Ainda não carregou.', abas:[] };
+
+async function carregarDadosIniciais(){
+  let prErr=null;
+  const pr = await fetch(WEB_APP_URL+'?t='+Date.now()).then(r=>r.json()).catch(e=>{ prErr=e; return null; });
+  const tr = await fetch(TORRE_URL+'?api=1&t='+Date.now()).then(r=>r.json()).catch(()=>null);
+
+  if(pr) masterData=pr;
+  if(tr) torreData=tr;
+  salvarCacheLocal();
+
+  if(prErr){
+    diagInfo = { ok:false, msg:'❌ Erro ao buscar a planilha (WEB_APP_URL): '+prErr.message+'. Provável causa: link não implantado como "Qualquer pessoa" ou arquivo aberto localmente (file://) sem servidor.', abas:[] };
+  } else if(!pr || typeof pr!=='object'){
+    diagInfo = { ok:false, msg:'⚠️ A planilha respondeu, mas sem dados utilizáveis (resposta vazia ou em formato inesperado).', abas:[] };
+  } else {
+    const abas = Object.keys(pr);
+    const temAprovacoes = abas.some(a=>normKey(a).indexOf('aprovacao')!==-1);
+    diagInfo = {
+      ok:true,
+      msg: temAprovacoes ? '✅ Conectado. Aba de Aprovações encontrada.' : '⚠️ Conectado, mas NÃO existe nenhuma aba chamada "Aprovacoes" na planilha — aprovar/reprovar não vai persistir entre atualizações.',
+      abas
+    };
+  }
+
+  renderForm(currentAba);
+  updateHistoryTable(currentAba);
+  aprovRefreshData();
+  if(currentAba==='Aprovacoes') aprovRenderHoje();
+}
+
+async function atualizarTorreSilencioso(){
+  try{
+    const [pr,tr]=await Promise.all([
+      fetch(WEB_APP_URL+'?t='+Date.now()).then(r=>r.json()).catch(()=>null),
+      fetch(TORRE_URL+'?api=1&t='+Date.now()).then(r=>r.json()).catch(()=>null)
+    ]);
+    if(pr) masterData=pr;
+    if(tr) torreData=tr;
+    salvarCacheLocal();
+    if(currentAba==='CargaDescarga'&&document.getElementById('select_torre')) montarSelectTorre();
+    aprovRefreshData();
+  }catch(e){}
+}
+
+// ── APROVAÇÕES — DATA ────────────────────────────────────
+function aprovRefreshData(){
+  aprovRecords=[];
+  aprovMap={};
+
+  const procMap={CargaDescarga:'carga',Separacao:'separacao',SeparacaoOP:'separacaoOp',RecebimentoOP:'recebimentoOp'};
+  Object.keys(masterData||{}).forEach(aba=>{
+    const an=normKey(aba);
+    if(an.indexOf('cadastro')!==-1||an.indexOf('aprovacao')!==-1||an.indexOf('reserva')!==-1) return;
+    const linhas=masterData[aba]||[];
+    const proc=procMap[aba]||an;
+    if(Array.isArray(linhas)){
+      linhas.forEach(row=>{
+        const tipo=normalizeTipo(getVal(row,['tipo','type']),proc);
+        const rec={
+          id:gerarIdAprov(proc,row), proc, tipo,
+          data:       getVal(row,['data','Data']),
+          conferente: getVal(row,['conferente','Conferente']),
+          operador:   getVal(row,['operador','Operador']),
+          motorista:  getVal(row,['motorista']),
+          nf:         getVal(row,['nf','NF']),
+          romaneio:   getVal(row,['romaneio']),
+          cliente:    getVal(row,['cliente','empresa']),
+          baia:       getVal(row,['baia']),
+          quantidade: getVal(row,['quantidade']),
+          horainicial:getVal(row,['horainicial','hora_inicial','hora inicial','Hora Inicial']),
+          horafinal:  getVal(row,['horafinal','hora_final','hora final','Hora Final']),
+          status:'PENDENTE'
+        };
+        if(rec.conferente||rec.operador||rec.horainicial) aprovRecords.push(rec);
+      });
+    }
+  });
+
+  if(masterData.Aprovacoes&&Array.isArray(masterData.Aprovacoes)){
+    masterData.Aprovacoes.forEach(r=>{
+      const id=getVal(r,['id','ID']);
+      const st=getVal(r,['status','Status']);
+      if(id&&st) aprovMap[id]=st.toUpperCase();
+    });
+  }
+
+  aprovRecords=aprovRecords.map(r=>({...r, status:aprovMap[r.id]||'PENDENTE'}));
+
+  // update conferente selects
+  const confs=[...new Set(aprovRecords.map(r=>r.conferente).filter(Boolean))].sort();
+  ['af-conf','af-hist-conf','af-rel-conf'].forEach(sid=>{
+    const sel=document.getElementById(sid); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Todos</option>'+confs.map(c=>`<option value="${c}">${c}</option>`).join('');
+    if(cur) sel.value=cur;
+  });
+
+  if(currentAba==='Aprovacoes'){
+    aprovRenderHoje();
+    setAprovMsg('aprov-status-hoje','✅ Atualizado em '+new Date().toLocaleTimeString('pt-BR'),true);
+  }
+}
+
+// ── APROVAÇÕES — TABS ────────────────────────────────────
+function showAprovTab(id,btn){
+  document.querySelectorAll('[id^="aprov-tab-"]').forEach(t=>t.style.display='none');
+  document.querySelectorAll('.aprov-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).style.display='';
+  if(btn) btn.classList.add('active');
+}
+
+function setAprovMsg(id,html,ok){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.innerHTML=html;
+  el.style.color=ok?'var(--primary-green)':'var(--text-dim)';
+}
+
+async function aprovLoadData(){
+  setAprovMsg('aprov-status-hoje','<span class="aprov-spin"></span> Carregando...',false);
+  await atualizarTorreSilencioso();
+  aprovRenderHoje();
+}
+
+// ── APROVAÇÕES — HOJE ────────────────────────────────────
+function aprovGetHoje(){
+  const hoje=getTodayStr();
+  const tipo=document.getElementById('af-tipo').value;
+  const conf=document.getElementById('af-conf').value;
+  const st=document.getElementById('af-status').value;
+  return aprovRecords.filter(r=>{
+    if(r.data!==hoje) return false;
+    if(tipo&&r.tipo!==tipo) return false;
+    if(conf&&r.conferente!==conf) return false;
+    if(st&&r.status!==st) return false;
+    return true;
+  });
+}
+['af-tipo','af-conf','af-status'].forEach(id=>{
+  document.addEventListener('DOMContentLoaded', function(){
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('change',aprovRenderHoje);
+  });
+});
+
+function aprovRenderHoje(){
+  const recs=aprovGetHoje();
+  const pend=recs.filter(r=>r.status==='PENDENTE').length;
+  const aprov=recs.filter(r=>r.status==='APROVADO').length;
+  const repro=recs.filter(r=>r.status==='REPROVADO').length;
+
+  document.getElementById('aprov-kpi-hoje').innerHTML=`
+    <div class="aprov-kpi blue"><div class="aprov-kpi-val">${recs.length}</div><div class="aprov-kpi-lbl">Total Hoje</div></div>
+    <div class="aprov-kpi gold"><div class="aprov-kpi-val">${pend}</div><div class="aprov-kpi-lbl">Pendentes</div></div>
+    <div class="aprov-kpi green"><div class="aprov-kpi-val">${aprov}</div><div class="aprov-kpi-lbl">Aprovados</div></div>
+    <div class="aprov-kpi red"><div class="aprov-kpi-val">${repro}</div><div class="aprov-kpi-lbl">Reprovados</div></div>
+  `;
+
+  // ── PAINEL DE DIAGNÓSTICO (ajuda a identificar por que os dados não aparecem) ──
+  const diagCor = diagInfo.ok ? (diagInfo.msg.startsWith('✅')?'var(--primary-green)':'var(--text-gold)') : 'var(--primary-red)';
+  const diagHtml = `
+    <div style="background:var(--bg-panel);border:1px solid ${diagCor};border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--text-dim);line-height:1.6">
+      <div style="color:${diagCor};font-weight:700;margin-bottom:4px">🔧 DIAGNÓSTICO DE CONEXÃO</div>
+      <div>${diagInfo.msg}</div>
+      <div>Abas encontradas na planilha: ${diagInfo.abas.length ? diagInfo.abas.join(', ') : '(nenhuma)'}</div>
+      <div>Total de registros carregados (todas as datas/status): ${aprovRecords.length}</div>
+      <div>Registros de hoje (${getTodayStr()}) antes dos filtros: ${aprovRecords.filter(r=>r.data===getTodayStr()).length}</div>
+    </div>`;
+
+  const tbody=document.getElementById('aprov-tbody-hoje');
+  if(!recs.length){
+    tbody.innerHTML=`<tr><td colspan="7">${diagHtml}<div class="aprov-empty">Nenhum registro encontrado para hoje com os filtros atuais.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=`<tr><td colspan="7">${diagHtml}</td></tr>`+recs.map(r=>aprovRowHTML(r,false)).join('');
+}
+
+// ── APROVAÇÕES — HISTÓRICO ────────────────────────────────
+function aprovRenderHist(){
+  const ini=document.getElementById('af-hist-ini').value;
+  const fim=document.getElementById('af-hist-fim').value;
+  const conf=document.getElementById('af-hist-conf').value;
+  const st=document.getElementById('af-hist-status').value;
+  const recs=aprovRecords.filter(r=>{
+    if(!r.data) return false;
+    if(ini&&r.data<ini) return false;
+    if(fim&&r.data>fim) return false;
+    if(conf&&r.conferente!==conf) return false;
+    if(st&&r.status!==st) return false;
+    return true;
+  });
+  document.getElementById('aprov-hist-count').textContent=`${recs.length} registro(s)`;
+  const tbody=document.getElementById('aprov-tbody-hist');
+  if(!recs.length){ tbody.innerHTML='<tr><td colspan="8" class="aprov-empty">Nenhum registro no período.</td></tr>'; return; }
+  tbody.innerHTML=recs.map(r=>aprovRowHTML(r,true)).join('');
+}
+
+function aprovRowHTML(r,showDate){
+  const detalhe=r.cliente||r.baia||r.romaneio||r.nf||'-';
+  const hor=(r.horainicial||'?')+' → '+(r.horafinal||'?');
+  const badgeTipo=r.tipo.includes('SEP')?'ab-sep':'ab-carga';
+  const badgeSt=r.status==='APROVADO'?'ab-ok':r.status==='REPROVADO'?'ab-no':'ab-pend';
+  const dateCol=showDate?`<td>${r.data||'-'}</td>`:'';
+  return `<tr>
+    ${dateCol}
+    <td><span class="aprov-badge ${badgeTipo}">${r.tipo}</span></td>
+    <td><strong>${r.conferente||'-'}</strong></td>
+    <td>${r.operador||'-'}</td>
+    <td style="white-space:nowrap;font-size:11px">${hor}</td>
+    <td style="color:var(--text-dim);font-size:11px">${detalhe}</td>
+    <td><span class="aprov-badge ${badgeSt}">${r.status}</span></td>
+    <td><button class="aprov-btn ghost" style="padding:3px 9px;font-size:10px" onclick="aprovOpenModal('${r.id}')">Revisar</button></td>
+  </tr>`;
+}
+
+// ── APROVAÇÕES — MODAL ────────────────────────────────────
+function aprovOpenModal(id){
+  const r=aprovRecords.find(x=>x.id===id);
+  if(!r) return;
+  const actBtns=r.status==='PENDENTE'?`
+    <button class="aprov-btn green" onclick="aprovDoAction('${id}','APROVADO')">✓ Aprovar</button>
+    <button class="aprov-btn red"   onclick="aprovDoAction('${id}','REPROVADO')">✗ Reprovar</button>
+  `:`<div style="text-align:center;padding:10px 0;color:${r.status==='APROVADO'?'var(--primary-green)':'var(--primary-red)'}">
+    ${r.status==='APROVADO'?'✓ Já Aprovado':'✗ Já Reprovado'}
+  </div>`;
+  const mc=document.getElementById('aprov-modal-container');
+  mc.innerHTML=`
+    <div class="aprov-modal-bg" onclick="if(event.target===this)aprovCloseModal()">
+      <div class="aprov-modal">
+        <div class="aprov-modal-title">Revisar Operação</div>
+        <div class="aprov-modal-grid">
+          <div class="aprov-mf"><label>Data</label><div class="val">${r.data||'-'}</div></div>
+          <div class="aprov-mf"><label>Processo</label><div class="val">${r.tipo}</div></div>
+          <div class="aprov-mf"><label>Conferente</label><div class="val">${r.conferente||'-'}</div></div>
+          <div class="aprov-mf"><label>Operador</label><div class="val">${r.operador||'-'}</div></div>
+          <div class="aprov-mf"><label>Hora Inicial</label><div class="val">${r.horainicial||'-'}</div></div>
+          <div class="aprov-mf"><label>Hora Final</label><div class="val">${r.horafinal||'-'}</div></div>
+          ${r.cliente?`<div class="aprov-mf"><label>Cliente</label><div class="val">${r.cliente}</div></div>`:''}
+          ${r.baia?`<div class="aprov-mf"><label>Baia</label><div class="val">${r.baia}</div></div>`:''}
+          ${r.quantidade?`<div class="aprov-mf"><label>Qtd</label><div class="val">${r.quantidade}</div></div>`:''}
+        </div>
+        <div class="aprov-mf" style="margin-top:10px"><label>Status Atual</label>
+          <div class="val"><span class="aprov-badge ${r.status==='APROVADO'?'ab-ok':r.status==='REPROVADO'?'ab-no':'ab-pend'}">${r.status}</span></div>
+        </div>
+        <div class="aprov-modal-actions">${actBtns}</div>
+        <button class="aprov-btn ghost" style="width:100%;margin-top:10px" onclick="aprovCloseModal()">Fechar</button>
+      </div>
+    </div>`;
+}
+function aprovCloseModal(){ document.getElementById('aprov-modal-container').innerHTML=''; }
+
+async function aprovDoAction(id,status){
+  aprovCloseModal();
+  const r=aprovRecords.find(x=>x.id===id);
+  if(!r) return;
+  r.status=status;
+  aprovMap[id]=status;
+  aprovRenderHoje();
+  try{
+    await fetch(WEB_APP_URL,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({_aba:'Aprovacoes',id,status,data:new Date().toLocaleString('pt-BR'),hora:new Date().toLocaleTimeString('pt-BR')})
+    });
+  }catch(e){}
+}
+
+function aprovExportCSV(){
+  const recs=aprovGetHoje();
+  if(!recs.length){ alert('Nenhum registro para exportar.'); return; }
+  const header=['Data','Processo','Conferente','Operador','Hora Inicial','Hora Final','Cliente','Status'];
+  const rows=recs.map(r=>[r.data,r.tipo,r.conferente,r.operador,r.horainicial,r.horafinal,r.cliente,r.status].map(v=>`"${(v||'').replace(/"/g,'""')}"`));
+  const csv=[header.join(';'),...rows.map(r=>r.join(';'))].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`aprovacoes_${getTodayStr()}.csv`;
+  a.click();
+}
+
+// ── APROVAÇÕES — RELATÓRIO ────────────────────────────────
+function aprovBuildReport(){
+  const ini=document.getElementById('af-rel-ini').value;
+  const fim=document.getElementById('af-rel-fim').value;
+  const conf=document.getElementById('af-rel-conf').value;
+  const st=document.getElementById('af-rel-status').value;
+
+  const recs=aprovRecords.filter(r=>{
+    if(!r.data) return false;
+    if(ini&&r.data<ini) return false;
+    if(fim&&r.data>fim) return false;
+    if(conf&&r.conferente!==conf) return false;
+    if(st&&r.status!==st) return false;
+    return true;
+  });
+
+  const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'?';
+  const per=ini===fim?fmtD(ini):`${fmtD(ini)} a ${fmtD(fim)}`;
+
+  const porConf={};
+  let tDesc=0,tCarga=0,somaMin=0,comTempo=0;
+  recs.forEach(r=>{
+    const c=r.conferente||'Sem Conferente';
+    if(!porConf[c]) porConf[c]={desc:0,carga:0,sep:0,sepOp:0,recOp:0,somaMin:0,comTempo:0,aprov:0,pend:0,repro:0};
+    const ti=r.tipo;
+    if(ti==='DESCARGA')        { porConf[c].desc++; tDesc++; }
+    else if(ti==='CARREGAMENTO'){ porConf[c].carga++; tCarga++; }
+    else if(ti==='SEPARAÇÃO')   porConf[c].sep++;
+    else if(ti==='SEPARAÇÃO OP')porConf[c].sepOp++;
+    else if(ti==='RECEBIMENTO OP')porConf[c].recOp++;
+    if(r.status==='APROVADO') porConf[c].aprov++;
+    else if(r.status==='PENDENTE') porConf[c].pend++;
+    else porConf[c].repro++;
+    const m=parseMin(r.data,r.horainicial,r.horafinal);
+    if(m!==null){ porConf[c].somaMin+=m; porConf[c].comTempo++; somaMin+=m; comTempo++; }
+  });
+
+  let txt=`╔══════════════════════════════════════╗\n`;
+  txt+=`║   ICC — RELATÓRIO LOGÍSTICO          ║\n`;
+  txt+=`╚══════════════════════════════════════╝\n`;
+  txt+=`Período : ${per}\n`;
+  txt+=`Filtro  : ${st||'Todos os status'}${conf?' | Conf: '+conf:''}\n`;
+  txt+=`Gerado  : ${new Date().toLocaleString('pt-BR')}\n`;
+  txt+=`\n── RESUMO GERAL ───────────────────────\n`;
+  txt+=`Total de operações : ${recs.length}\n`;
+  txt+=`Descargas          : ${tDesc}\n`;
+  txt+=`Carregamentos      : ${tCarga}\n`;
+  txt+=`Tempo médio geral  : ${comTempo?Math.round(somaMin/comTempo)+' min':'--'}\n`;
+  const confs=Object.keys(porConf).sort();
+  if(confs.length){
+    txt+=`\n── POR CONFERENTE ─────────────────────\n`;
+    confs.forEach(c=>{
+      const p=porConf[c];
+      const media=p.comTempo?Math.round(p.somaMin/p.comTempo)+' min':'--';
+      txt+=`\n▸ ${c}\n`;
+      txt+=`  Descargas    : ${p.desc}\n`;
+      txt+=`  Carregamentos: ${p.carga}\n`;
+      if(p.sep)   txt+=`  Separação    : ${p.sep}\n`;
+      if(p.sepOp) txt+=`  Separação OP : ${p.sepOp}\n`;
+      if(p.recOp) txt+=`  Recebimento  : ${p.recOp}\n`;
+      txt+=`  Tempo médio  : ${media}\n`;
+      txt+=`  ✅ ${p.aprov} | ⏳ ${p.pend} | ❌ ${p.repro}\n`;
+    });
+  }
+  txt+=`\n═══════════════════════════════════════\n`;
+  document.getElementById('aprov-rel-txt').value=txt;
+}
+
+function aprovSendWA(){
+  const txt=document.getElementById('aprov-rel-txt').value;
+  if(!txt.trim()){ alert('Gere o relatório primeiro.'); return; }
+  const url=`https://api.callmebot.com/whatsapp.php?phone=${WA_PHONE}&text=${encodeURIComponent(txt)}&apikey=${WA_APIKEY}`;
+  fetch(url,{mode:'no-cors'})
+    .then(()=>setAprovMsg('aprov-rel-status','✅ Enviado para o WhatsApp.',true))
+    .catch(()=>setAprovMsg('aprov-rel-status','❌ Erro ao enviar.',false));
+}
+function aprovCopyRel(){
+  const txt=document.getElementById('aprov-rel-txt').value;
+  if(!txt.trim()){ alert('Gere o relatório primeiro.'); return; }
+  navigator.clipboard.writeText(txt).then(()=>setAprovMsg('aprov-rel-status','✅ Copiado.',true)).catch(()=>{});
+}
+function aprovExportRelCSV(){
+  const ini=document.getElementById('af-rel-ini').value;
+  const fim=document.getElementById('af-rel-fim').value;
+  const conf=document.getElementById('af-rel-conf').value;
+  const st=document.getElementById('af-rel-status').value;
+  const recs=aprovRecords.filter(r=>{
+    if(!r.data) return false;
+    if(ini&&r.data<ini) return false;
+    if(fim&&r.data>fim) return false;
+    if(conf&&r.conferente!==conf) return false;
+    if(st&&r.status!==st) return false;
+    return true;
+  });
+  if(!recs.length){ alert('Nenhum registro.'); return; }
+  const header=['Data','Processo','Conferente','Operador','Hora Inicial','Hora Final','Cliente/Detalhe','Status'];
+  const rows=recs.map(r=>[r.data,r.tipo,r.conferente,r.operador,r.horainicial,r.horafinal,r.cliente||r.baia||r.romaneio||'',r.status].map(v=>`"${(v||'').replace(/"/g,'""')}"`));
+  const csv=[header.join(';'),...rows.map(r=>r.join(';'))].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`relatorio_${ini||'tudo'}_${fim||''}.csv`;
+  a.click();
+}
+
+// ── PAGE SWITCH ──────────────────────────────────────────
+function switchPage(aba,btn){
+  currentAba=aba;
+  document.querySelectorAll('#main-nav button').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  const histSec=document.getElementById('history-section');
+  const mainCard=document.getElementById('main-card');
+  const aprovInline=document.getElementById('aprovacoes-inline');
+
+  aprovInline.style.display='none';
+  mainCard.style.display='';
+
+  if(aba==='Aprovacoes'){
+    document.getElementById('page-title').textContent='APROVAÇÕES DE OPERAÇÕES';
+    document.getElementById('page-desc').textContent='Aprove, reprove e gere relatórios — direto deste painel.';
+    if(histSec) histSec.style.display='none';
+    mainCard.style.display='none';
+    aprovInline.style.display='';
+    aprovRenderHoje();
+  } else if(aba==='KPI'){
+    document.getElementById('page-title').textContent='INDICADORES (KPI)';
+    document.getElementById('page-desc').textContent='Indicadores em tempo real — somente operações aprovadas.';
+    if(histSec) histSec.style.display='none';
+  } else if(aba==='CargaDescarga'){
+    document.getElementById('page-title').textContent='CARGA / DESCARGA';
+    document.getElementById('page-desc').textContent='Selecione o caminhão finalizado na Torre — tipo, motorista, NF, cliente e horários são preenchidos automaticamente. Você só informa posição, conferente, operador e romaneio.';
+    if(histSec) histSec.style.display='';
+    updateHistoryTable(aba);
+  } else {
+    document.getElementById('page-title').textContent=aba.replace(/([A-Z])/g,' $1').trim();
+    document.getElementById('page-desc').textContent='Preenchimento dos campos do processo.';
+    if(histSec) histSec.style.display='';
+    updateHistoryTable(aba);
+  }
+
+  renderForm(aba);
+}
+
+// ── RENDER FORM ──────────────────────────────────────────
+function renderForm(aba){
+  if(aba==='Aprovacoes') return;
+  const form=document.getElementById('main-form');
+  form.innerHTML='';
+  form.classList.toggle('kpi-grid', aba==='KPI');
+  document.getElementById('process-section-title').textContent=aba==='KPI'?'📊 Indicadores por Conferente':(aba==='CargaDescarga'?'🚚 Caminhão + Conferência':'✨ Campos do Processo');
+
+  if(aba==='KPI'){ renderKPIs(form); return; }
+
+  if(aba==='CargaDescarga'){
+    camSelecionado = null;
+
+    const box=document.createElement('div');
+    box.className='torre-box';
+    box.innerHTML=`<label>📡 Selecionar caminhão finalizado (Torre de Controle)</label>
+      <select id="select_torre" onchange="preencherDaTorre()"><option value="">Carregando...</option></select>
+      <div class="reserva-info" id="reserva-info">🔒 Este caminhão foi reservado para você.</div>`;
+    form.appendChild(box);
+
+    // painel com os dados que vêm automáticos da torre (somente leitura)
+    const prev=document.createElement('div');
+    prev.className='auto-preview';
+    prev.id='auto-preview';
+    prev.innerHTML=`
+      <div class="auto-preview-title">🤖 Preenchido automaticamente pela Torre</div>
+      <div class="ap-item"><span class="ap-lbl">Tipo</span><span class="ap-val empty" id="ap_tipo">—</span></div>
+      <div class="ap-item"><span class="ap-lbl">Motorista</span><span class="ap-val empty" id="ap_motorista">—</span></div>
+      <div class="ap-item"><span class="ap-lbl">NF</span><span class="ap-val empty" id="ap_nf">—</span></div>
+      <div class="ap-item"><span class="ap-lbl">Cliente / Empresa</span><span class="ap-val empty" id="ap_cliente">—</span></div>
+      <div class="ap-item"><span class="ap-lbl">Data</span><span class="ap-val empty" id="ap_data">—</span></div>
+      <div class="ap-item"><span class="ap-lbl">Hora Inicial</span><span class="ap-val empty" id="ap_horainicial">—</span></div>
+      <div class="ap-item"><span class="ap-lbl">Hora Final</span><span class="ap-val empty" id="ap_horafinal">—</span></div>`;
+    form.appendChild(prev);
+
+    const alertBox=document.createElement('div');
+    alertBox.className='form-alert';
+    alertBox.id='form-alert';
+    alertBox.textContent='⚠️ Selecione um caminhão finalizado na Torre de Controle antes de enviar.';
+    form.appendChild(alertBox);
+
+    montarSelectTorre();
+  }
+
+  (SCHEMAS[aba]||[]).forEach(campo=>{
+    const div=document.createElement('div');
+    div.className='field-group'+(campo.full?' full-width':'')+(campo.required?' field-required':'');
+    const lbl=document.createElement('label');
+    lbl.textContent=campo.label;
+    div.appendChild(lbl);
+    let input;
+    if(campo.type==='select'){
+      input=document.createElement('select');
+      input.innerHTML='<option value="">Selecione...</option>';
+      if(campo.options) campo.options.forEach(o=>input.add(new Option(o,o)));
+      if(campo.id==='conferente'&&masterData.CadastroConferentes)
+        masterData.CadastroConferentes.forEach(i=>i.nome&&input.add(new Option(i.nome,i.nome)));
+      if(campo.id==='operador'&&masterData.CadastroOperadores)
+        masterData.CadastroOperadores.forEach(i=>i.nome&&input.add(new Option(i.nome,i.nome)));
+    } else {
+      input=document.createElement('input');
+      input.type=campo.type;
+    }
+    input.id='field_'+campo.id;
+    div.appendChild(input);
+    form.appendChild(div);
+  });
+
+  // campos ocultos da CargaDescarga que são preenchidos só via JS (auto da torre)
+  if(aba==='CargaDescarga'){
+    CAMPOS_AUTO_CARGA.forEach(id=>{
+      if(!document.getElementById('field_'+id)){
+        const inp=document.createElement('input');
+        inp.type='hidden';
+        inp.id='field_'+id;
+        form.appendChild(inp);
+      }
+    });
+  }
+
+  if(['CargaDescarga','Separacao','SeparacaoOP','RecebimentoOP'].includes(aba)){
+    const auto = aba==='CargaDescarga';
+    const tb=document.createElement('div');
+    tb.className='time-control-box full-width'+(auto?' locked':'');
+    tb.innerHTML=`<div class="card-section-title">🕒 ${auto?'Horários (automáticos da Torre)':'Controle de Horários'}</div>
+      <div class="time-grid">
+        <div class="field-group"><label>Data</label><input type="date" id="field_data" ${auto?'readonly':''}></div>
+        <div class="field-group"><label>Hora Inicial</label><input type="time" id="field_horainicial" ${auto?'readonly':''}></div>
+        <div class="field-group"><label>Hora Final</label><input type="time" id="field_horafinal" ${auto?'readonly':''}></div>
+        <div class="field-group"><button type="button" class="btn-current-time" id="btn-hora-atual" onclick="setNow('field_horafinal')" ${auto?'disabled':''}>⏱ HORA ATUAL COMO FINAL</button></div>
+      </div>`;
+    form.appendChild(tb);
+    if(!auto){
+      document.getElementById('field_data').value=new Date().toISOString().split('T')[0];
+      document.getElementById('field_horainicial').value=new Date().toTimeString().split(' ')[0].substring(0,5);
+    }
+  }
+
+  const btn=document.createElement('button');
+  btn.type='button';
+  btn.className='btn-submit';
+  btn.id='btn-submit-main';
+  btn.textContent=aba.includes('Cadastro')?'💾 Salvar Cadastro':'✓ Enviar para Planilha';
+  btn.onclick=submitForm;
+  if(aba==='CargaDescarga') btn.disabled=true; // só libera depois de escolher o caminhão
+  form.appendChild(btn);
+}
+
+// ── KPI ──────────────────────────────────────────────────
+function statusAprovacaoDoRegistro(r){
+  const id=gerarIdAprov('carga',r);
+  return aprovMap[id]||'PENDENTE';
+}
+
+function renderKPIs(form){
+  const todos=(masterData&&masterData.CargaDescarga)||[];
+  if(!todos.length){
+    const av=document.createElement('div');
+    av.className='kpi-aviso';
+    av.textContent='⚠️ Ainda não há registros de Carga/Descarga.';
+    form.appendChild(av);
+    return;
+  }
+
+  const classif=todos.map(r=>({r,status:statusAprovacaoDoRegistro(r)}));
+  const pend=classif.filter(c=>c.status==='PENDENTE').length;
+  const repro=classif.filter(c=>c.status==='REPROVADO').length;
+  const registros=classif.filter(c=>c.status==='APROVADO').map(c=>c.r);
+
+  const nota=document.createElement('div'); nota.className='kpi-note';
+  nota.textContent='✅ Indicadores consideram SOMENTE operações já aprovadas. Pendentes e reprovadas ficam de fora.';
+  form.appendChild(nota);
+
+  const gv=(obj,key)=>{ if(obj[key]!==undefined) return obj[key]; const f=Object.keys(obj).find(k=>k.toLowerCase()===key.toLowerCase()); return f?obj[f]:undefined; };
+
+  const porConf={};
+  let tDesc=0,tCarga=0,somaMin=0,comTempo=0;
+  registros.forEach(r=>{
+    const conf=(gv(r,'conferente')&&String(gv(r,'conferente')).trim())||'Sem Conferente';
+    const tipo=String(gv(r,'tipo')||'').toLowerCase();
+    if(!porConf[conf]) porConf[conf]={desc:0,carga:0,somaMin:0,comTempo:0};
+    if(tipo.includes('descarga')){ porConf[conf].desc++; tDesc++; }
+    else if(tipo.includes('carga')){ porConf[conf].carga++; tCarga++; }
+    const data=gv(r,'data'),hi=gv(r,'horainicial'),hf=gv(r,'horafinal');
+    if(data&&hi&&hf){
+      const dI=new Date(data+'T'+hi),dF=new Date(data+'T'+hf);
+      let d=(dF-dI)/60000;
+      if(!isNaN(d)){ if(d<0)d+=1440; if(d>=0&&d<1440){ porConf[conf].somaMin+=d; porConf[conf].comTempo++; somaMin+=d; comTempo++; } }
+    }
+  });
+
+  if(!registros.length){
+    const av=document.createElement('div'); av.className='kpi-aviso';
+    av.textContent='⚠️ Nenhuma operação APROVADA. Pendentes: '+pend+' | Reprovadas: '+repro+'. Aprove na aba ✅ APROVAÇÕES.';
+    form.appendChild(av); return;
+  }
+
+  [
+    {icon:'✅',label:'Aprovados',value:registros.length},
+    {icon:'⏳',label:'Pendentes',value:pend},
+    {icon:'❌',label:'Reprovados',value:repro},
+    {icon:'⏱',label:'Tempo Médio (min)',value:comTempo?Math.round(somaMin/comTempo):'--'}
+  ].forEach(c=>{
+    const div=document.createElement('div');
+    div.className='kpi-card';
+    div.innerHTML=`<div class="kpi-icon">${c.icon}</div><div class="kpi-value">${c.value}</div><div class="kpi-label">${c.label}</div>`;
+    form.appendChild(div);
+  });
+
+  const confs=Object.keys(porConf).sort();
+  const w1=document.createElement('div'); w1.className='kpi-chart-wrap';
+  w1.innerHTML='<div class="card-section-title">📊 Quantidade por Conferente (Descarga × Carga)</div><canvas id="chartQtd"></canvas>';
+  form.appendChild(w1);
+  const w2=document.createElement('div'); w2.className='kpi-chart-wrap';
+  w2.innerHTML='<div class="card-section-title">⏱ Tempo Médio na Doca por Conferente (min)</div><canvas id="chartTempo"></canvas>';
+  form.appendChild(w2);
+  const w3=document.createElement('div'); w3.className='kpi-chart-wrap';
+  w3.innerHTML='<div class="card-section-title">🧭 Status das Operações</div><canvas id="chartSt"></canvas>';
+  form.appendChild(w3);
+
+  // Resumo WhatsApp
+  const wR=document.createElement('div'); wR.className='kpi-resumo-box';
+  wR.innerHTML=`<label>📲 Resumo por WhatsApp (aprovados)</label>
+    <div class="resumo-periodo-grid">
+      <div class="field-group"><label>De</label><input type="date" id="resumo-ini"></div>
+      <div class="field-group"><label>Até</label><input type="date" id="resumo-fim"></div>
+    </div>
+    <textarea id="resumo-txt" readonly></textarea>
+    <div class="btn-row">
+      <button type="button" class="btn-wpp" onclick="enviarResumoWA(false)">📤 Enviar Período</button>
+      <button type="button" class="btn-wpp alt" onclick="atualizarPreviewResumo()">🔄 Atualizar Prévia</button>
+    </div>
+    <div class="resumo-status" id="resumo-status">Envio automático às ${RESUMO_HORA} se o app estiver aberto.</div>`;
+  form.appendChild(wR);
+  const hoje=getTodayStr();
+  document.getElementById('resumo-ini').value=hoje;
+  document.getElementById('resumo-fim').value=hoje;
+  document.getElementById('resumo-ini').addEventListener('change',atualizarPreviewResumo);
+  document.getElementById('resumo-fim').addEventListener('change',atualizarPreviewResumo);
+  atualizarPreviewResumo();
+
+  requestAnimationFrame(()=>{
+    if(typeof Chart==='undefined') return;
+    if(chartQtdConf) chartQtdConf.destroy();
+    chartQtdConf=new Chart(document.getElementById('chartQtd').getContext('2d'),{
+      type:'bar',
+      data:{labels:confs,datasets:[
+        {label:'Descargas',data:confs.map(c=>porConf[c].desc),backgroundColor:'#4a90d9'},
+        {label:'Cargas',data:confs.map(c=>porConf[c].carga),backgroundColor:'#d9564b'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{beginAtZero:true,ticks:{precision:0}}},
+        plugins:{legend:{position:'bottom'}}}
+    });
+    if(chartTempoConf) chartTempoConf.destroy();
+    chartTempoConf=new Chart(document.getElementById('chartTempo').getContext('2d'),{
+      type:'bar',
+      data:{labels:confs,datasets:[{label:'Tempo Médio (min)',data:confs.map(c=>porConf[c].comTempo?Math.round(porConf[c].somaMin/porConf[c].comTempo):0),backgroundColor:'#d4af37'}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}
+    });
+    if(chartStatusAprov) chartStatusAprov.destroy();
+    chartStatusAprov=new Chart(document.getElementById('chartSt').getContext('2d'),{
+      type:'doughnut',
+      data:{labels:['Aprovados','Pendentes','Reprovados'],datasets:[{data:[registros.length,pend,repro],backgroundColor:['#34c281','#d4af37','#d9564b']}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+    });
+  });
+}
+
+// ── RESUMO WA ────────────────────────────────────────────
+function montarResumoTextoPeriodo(ini,fim){
+  const todos=(masterData&&masterData.CargaDescarga)||[];
+  const gv=(obj,key)=>{ if(obj[key]!==undefined) return obj[key]; const f=Object.keys(obj).find(k=>k.toLowerCase()===key.toLowerCase()); return f?obj[f]:undefined; };
+  const noPer=todos.filter(r=>{ const d=gv(r,'data'); return d&&d>=ini&&d<=fim; });
+  const aprov=noPer.filter(r=>statusAprovacaoDoRegistro(r)==='APROVADO');
+  const porConf={};
+  let tDesc=0,tCarga=0,somaMin=0,comTempo=0;
+  aprov.forEach(r=>{
+    const c=(gv(r,'conferente')&&String(gv(r,'conferente')).trim())||'Sem Conferente';
+    const tipo=String(gv(r,'tipo')||'').toLowerCase();
+    if(!porConf[c]) porConf[c]={desc:0,carga:0,somaMin:0,comTempo:0};
+    if(tipo.includes('descarga')){ porConf[c].desc++; tDesc++; }
+    else if(tipo.includes('carga')){ porConf[c].carga++; tCarga++; }
+    const data=gv(r,'data'),hi=gv(r,'horainicial'),hf=gv(r,'horafinal');
+    if(data&&hi&&hf){ const dI=new Date(data+'T'+hi),dF=new Date(data+'T'+hf); let d=(dF-dI)/60000; if(!isNaN(d)){ if(d<0)d+=1440; if(d>=0&&d<1440){ porConf[c].somaMin+=d; porConf[c].comTempo++; somaMin+=d; comTempo++; } } }
+  });
+  const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'?';
+  const per=ini===fim?fmtD(ini):`${fmtD(ini)} a ${fmtD(fim)}`;
+  let txt=`*ICC - Resumo (${per})*\n_Somente operações aprovadas_\n`;
+  txt+=`Total: ${aprov.length} | Descargas: ${tDesc} | Cargas: ${tCarga}\n`;
+  txt+=`Tempo médio geral: ${comTempo?Math.round(somaMin/comTempo)+'min':'--'}\n\n*Por conferente:*\n`;
+  if(!Object.keys(porConf).length) txt+='- (nenhuma operação aprovada)\n';
+  Object.keys(porConf).sort().forEach(c=>{ const p=porConf[c]; txt+=`- ${c}: ${p.desc} desc, ${p.carga} carga, média ${p.comTempo?Math.round(p.somaMin/p.comTempo):'--'}min\n`; });
+  return txt;
+}
+function atualizarPreviewResumo(){
+  const ini=document.getElementById('resumo-ini');
+  const fim=document.getElementById('resumo-fim');
+  const ta=document.getElementById('resumo-txt');
+  if(ini&&fim&&ta) ta.value=montarResumoTextoPeriodo(ini.value,fim.value);
+}
+function enviarResumoWA(auto){
+  let txt;
+  if(auto){ const h=getTodayStr(); txt=montarResumoTextoPeriodo(h,h); }
+  else { atualizarPreviewResumo(); txt=document.getElementById('resumo-txt')?document.getElementById('resumo-txt').value:''; }
+  if(!txt) return;
+  const url=`https://api.callmebot.com/whatsapp.php?phone=${WA_PHONE}&text=${encodeURIComponent(txt)}&apikey=${WA_APIKEY}`;
+  fetch(url,{mode:'no-cors'}).then(()=>{ marcarResumoHoje(); const s=document.getElementById('resumo-status'); if(s)s.textContent='✅ Enviado!'; if(!auto)alert('Resumo enviado!'); }).catch(()=>{ if(!auto)alert('Erro ao enviar.'); });
+}
+function chaveResumoHoje(){ return 'icc_resumo_'+getTodayStr(); }
+function resumoJaEnviadoHoje(){ return !!localStorage.getItem(chaveResumoHoje()); }
+function marcarResumoHoje(){ try{ localStorage.setItem(chaveResumoHoje(),'1'); }catch(e){} }
+function verificarResumoAutomatico(){
+  if(resumoJaEnviadoHoje()) return;
+  const agora=new Date();
+  const [h,m]=RESUMO_HORA.split(':').map(Number);
+  const alvo=new Date(agora); alvo.setHours(h,m,0,0);
+  const diff=(agora-alvo)/60000;
+  if(diff<0||diff>10) return;
+  const recs=(masterData&&masterData.CargaDescarga)||[];
+  if(!recs.length) return;
+  enviarResumoWA(true);
+}
+
+// ── TORRE ────────────────────────────────────────────────
+function dentroDoDiaOp(dateStr){
+  if(!dateStr) return false;
+  const d=new Date(dateStr);
+  if(isNaN(d.getTime())) return false;
+  const agora=new Date();
+  const ini=new Date(agora); ini.setHours(6,0,0,0);
+  if(agora<ini) ini.setDate(ini.getDate()-1);
+  const fim=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate()+1,0,0,0,0);
+  return d>=ini&&d<fim;
+}
+function montarSelectTorre(){
+  const select=document.getElementById('select_torre');
+  if(!select||!torreData) return;
+  const cur=select.value;
+  limparReservasExpiradas(); salvarReservasLocais();
+  select.innerHTML='<option value="">-- Escolha um caminhão --</option>';
+  const fmt=c=>`${c.ordem?c.ordem+'ª ':''}`+`${(c.tipo||'').toUpperCase()}`+`${c.destino?' '+c.destino:''}`+`${c.romaneio?' '+c.romaneio:''}`+`${c.bags?' '+c.bags:''}`+`${c.veiculo?' ('+c.veiculo+')':''}`+`${c.motorista?' MOT '+c.motorista:''}`+`${c.transportadora?' ('+c.transportadora+')':''}`;
+  if(torreData.concluidosRecentes){
+    torreData.concluidosRecentes.forEach((c,idx)=>{
+      const d=c.concluidoEm||c.desde;
+      if(!dentroDoDiaOp(d)) return;
+      const chave=`concluido::${idx}`;
+      if(chaveReservadaPorOutro(chave)) return;
+      const preso=reservasLocais[chave]?'🔒 ':(c.recusado?'🔴 ':'🔵 ');
+      select.add(new Option(`${preso}${c.recusado?'RECUSADO':'FINALIZADO'} | ${fmt(c)}`,chave));
+    });
+  }
+  if(cur&&select.querySelector(`option[value="${cur}"]`)) select.value=cur;
+  const info=document.getElementById('reserva-info');
+  if(info) info.classList.toggle('show',!!reservasLocais[select.value]);
+  atualizarPreviewAuto();
+}
+
+function setPreviewCampo(id,valor){
+  const el=document.getElementById(id);
+  if(!el) return;
+  if(valor){ el.textContent=valor; el.classList.remove('empty'); }
+  else{ el.textContent='—'; el.classList.add('empty'); }
+}
+
+function atualizarPreviewAuto(){
+  const c=camSelecionado||{};
+  setPreviewCampo('ap_tipo', c.tipo || '');
+  setPreviewCampo('ap_motorista', c.motorista || '');
+  setPreviewCampo('ap_nf', c.nf || '');
+  setPreviewCampo('ap_cliente', c.cliente || '');
+  setPreviewCampo('ap_data', c.data ? new Date(c.data+'T00:00:00').toLocaleDateString('pt-BR') : '');
+  setPreviewCampo('ap_horainicial', c.horainicial || '');
+  setPreviewCampo('ap_horafinal', c.horafinal || '');
+  const prev=document.getElementById('auto-preview');
+  if(prev) prev.classList.toggle('show', !!(c.tipo||c.motorista||c.nf));
+  const alertBox=document.getElementById('form-alert');
+  const btn=document.getElementById('btn-submit-main');
+  const camPronto = !!(c.tipo && c.horainicial);
+  if(alertBox) alertBox.classList.toggle('show', !camPronto);
+  if(btn) btn.disabled = !camPronto;
+}
+
+function preencherDaTorre(){
+  const val=document.getElementById('select_torre').value;
+  camSelecionado=null;
+  if(!val){ atualizarPreviewAuto(); return; }
+  const [origem,chave]=val.split('::');
+  let cam=null;
+  if(origem==='concluido') cam=torreData.concluidosRecentes[chave];
+  if(origem==='doca'||origem==='aguardando'||origem==='concluido'){ reservarCaminhao(val); const info=document.getElementById('reserva-info'); if(info) info.classList.add('show'); }
+  if(cam){
+    const dados={
+      tipo: cam.tipo==='carregamento'?'Carga':'Descarga',
+      motorista: cam.motorista||'',
+      nf: cam.romaneio||'',
+      cliente: cam.destino||cam.transportadora||'',
+      baia: origem==='doca'?chave:(cam.doca||''),
+      data:'', horainicial:'', horafinal:''
+    };
+    if(cam.desde){
+      const dI=new Date(cam.desde);
+      dados.data=dI.toISOString().split('T')[0];
+      dados.horainicial=dI.toTimeString().substring(0,5);
+    }
+    if(origem==='concluido'&&cam.concluidoEm){
+      const dF=new Date(cam.concluidoEm);
+      dados.horafinal=dF.toTimeString().substring(0,5);
+      if(!cam.desde) dados.data=dF.toISOString().split('T')[0];
+    }
+    camSelecionado=dados;
+
+    // grava nos campos ocultos/reais que vão para a planilha
+    if(document.getElementById('field_tipo')) document.getElementById('field_tipo').value=dados.tipo;
+    if(document.getElementById('field_motorista')) document.getElementById('field_motorista').value=dados.motorista;
+    if(document.getElementById('field_nf')) document.getElementById('field_nf').value=dados.nf;
+    if(document.getElementById('field_cliente')) document.getElementById('field_cliente').value=dados.cliente;
+    if(document.getElementById('field_data')) document.getElementById('field_data').value=dados.data;
+    if(document.getElementById('field_horainicial')) document.getElementById('field_horainicial').value=dados.horainicial;
+    if(document.getElementById('field_horafinal')) document.getElementById('field_horafinal').value=dados.horafinal;
+    // sugere a posição/baia (usuário ainda pode ajustar, é um dos 4 campos manuais)
+    if(document.getElementById('field_baia')&&!document.getElementById('field_baia').value) document.getElementById('field_baia').value=dados.baia;
+    // sugere romaneio a partir do que vier da torre, se o campo estiver vazio
+    if(document.getElementById('field_romaneio')&&!document.getElementById('field_romaneio').value&&cam.romaneio) document.getElementById('field_romaneio').value=cam.romaneio;
+  }
+  atualizarPreviewAuto();
+}
+function setNow(id){ document.getElementById(id).value=new Date().toTimeString().split(' ')[0].substring(0,5); }
+
+// ── SUBMIT ───────────────────────────────────────────────
+async function submitForm(){
+  if(currentAba==='CargaDescarga'){
+    if(!camSelecionado||!camSelecionado.tipo||!camSelecionado.horainicial){
+      alert('Selecione um caminhão finalizado na Torre de Controle antes de enviar.');
+      return;
+    }
+    const camposObrig=['baia','conferente','operador','romaneio'];
+    for(const id of camposObrig){
+      const el=document.getElementById('field_'+id);
+      if(!el||!el.value){
+        alert('Preencha o campo obrigatório: '+id.toUpperCase());
+        if(el) el.focus();
+        return;
+      }
+    }
+  }
+
+  const overlay=document.getElementById('loading-overlay');
+  overlay.style.display='flex';
+  const dados={_aba:currentAba};
+  const idsEnvio = currentAba==='CargaDescarga'
+    ? [...(SCHEMAS[currentAba]||[]).map(c=>c.id), ...CAMPOS_AUTO_CARGA]
+    : (SCHEMAS[currentAba]||[]).map(c=>c.id);
+  idsEnvio.forEach(id=>{ const el=document.getElementById('field_'+id); dados[id]=el?el.value:''; });
+  if(document.getElementById('field_data')){
+    dados.data=document.getElementById('field_data').value;
+    dados.horainicial=document.getElementById('field_horainicial').value;
+    dados.horafinal=document.getElementById('field_horafinal').value;
+  }
+  const st=document.getElementById('select_torre');
+  const chaveEnv=st?st.value:null;
+  try{
+    await fetch(WEB_APP_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(dados)});
+    if(chaveEnv&&reservasLocais[chaveEnv]){ delete reservasLocais[chaveEnv]; salvarReservasLocais(); }
+    alert('Enviado com sucesso!');
+    carregarDadosIniciais();
+  }catch(e){ alert('Erro ao enviar.'); }
+  finally{ overlay.style.display='none'; }
+}
+
+// ── HISTORY TABLE ─────────────────────────────────────────
+function updateHistoryTable(aba){
+  const head=document.getElementById('table-head');
+  const body=document.getElementById('table-body');
+  head.innerHTML=body.innerHTML='';
+  const dados=masterData[aba]||[];
+  if(!dados.length) return;
+  Object.keys(dados[0]).forEach(k=>{ const th=document.createElement('th'); th.textContent=k.toUpperCase(); head.appendChild(th); });
+  dados.slice().reverse().slice(0,10).forEach(row=>{
+    const tr=body.insertRow();
+    Object.values(row).forEach(v=>{ tr.insertCell().textContent=v; });
+  });
+}
+</script>
+</body>
+</html>
