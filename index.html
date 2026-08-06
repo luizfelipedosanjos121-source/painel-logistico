@@ -179,6 +179,9 @@
     .rel-box h3{font-size:10px;font-weight:700;color:var(--primary-green);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
     .rel-box textarea{width:100%;min-height:200px;background:var(--input-bg);color:var(--text-main);border:1px solid var(--border-soft);border-radius:6px;padding:10px;font-family:'Courier New',monospace;font-size:11.5px;resize:vertical;margin-bottom:10px}
     .rel-box textarea:focus{outline:2px solid var(--text-gold)}
+    .rel-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .rel-chart-card{background:#fff;border-radius:8px;padding:12px;height:260px}
+    .rel-preset-row{margin-bottom:10px}
 
     /* ── MODAL ── */
     .aprov-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999}
@@ -219,7 +222,7 @@
 
     @media(max-width:900px){main{max-width:100%;padding:0 4px}}
     @media(max-width:600px){
-      .form-grid,.time-grid,.resumo-periodo-grid,.aprov-filter-row{grid-template-columns:1fr}
+      .form-grid,.time-grid,.resumo-periodo-grid,.aprov-filter-row,.rel-charts-grid{grid-template-columns:1fr}
       .full-width,.torre-box,.auto-preview{grid-column:span 1}
       h2{font-size:21px}
       nav{justify-content:flex-start}
@@ -376,6 +379,12 @@
     <div id="aprov-tab-rel" style="display:none">
       <div class="aprov-card">
         <h3>📄 Parâmetros do Relatório</h3>
+        <div class="aprov-filter-row rel-preset-row">
+          <button class="aprov-btn ghost" onclick="aprovSetPeriodo('hoje')">📅 Hoje</button>
+          <button class="aprov-btn ghost" onclick="aprovSetPeriodo('ontem')">📅 Ontem</button>
+          <button class="aprov-btn ghost" onclick="aprovSetPeriodo('7dias')">📅 Últimos 7 dias</button>
+          <button class="aprov-btn ghost" onclick="aprovSetPeriodo('mes')">📅 Este Mês</button>
+        </div>
         <div class="aprov-filter-row">
           <div class="aprov-field"><label>De</label><input type="date" id="af-rel-ini"></div>
           <div class="aprov-field"><label>Até</label><input type="date" id="af-rel-fim"></div>
@@ -396,11 +405,20 @@
         </div>
       </div>
 
+      <div class="rel-box" id="rel-charts-box">
+        <h3>📊 Desempenho do Período</h3>
+        <div class="rel-charts-grid">
+          <div class="rel-chart-card"><canvas id="chartRelQtd"></canvas></div>
+          <div class="rel-chart-card"><canvas id="chartRelStatus"></canvas></div>
+        </div>
+      </div>
+
       <div class="rel-box">
         <h3>📋 Prévia</h3>
         <textarea id="aprov-rel-txt" readonly placeholder="Configure os parâmetros e clique em Gerar..."></textarea>
         <div class="btn-row">
           <button class="aprov-btn green" onclick="aprovSendWA()">📲 WhatsApp</button>
+          <button class="aprov-btn gold" onclick="aprovExportWord()">📃 Word Detalhado</button>
           <button class="aprov-btn blue" onclick="aprovExportRelCSV()">📥 CSV</button>
           <button class="aprov-btn ghost" onclick="aprovCopyRel()">📋 Copiar</button>
         </div>
@@ -443,7 +461,7 @@ let pendingBtn = null;
 let currentAba = 'CargaDescarga';
 let masterData = {};
 let torreData  = null;
-let chartQtdConf=null, chartTempoConf=null, chartStatusAprov=null;
+let chartQtdConf=null, chartTempoConf=null, chartStatusAprov=null, chartRelQtd=null, chartRelStatus=null;
 
 // ── APROVAÇÕES STATE ──────────────────────────────────────
 let aprovRecords    = [];
@@ -456,6 +474,20 @@ let camSelecionado = null; // guarda todos os dados puxados da Torre para o envi
 let sessionId = localStorage.getItem('icc_sessionId');
 if(!sessionId){ sessionId='S'+Date.now()+Math.random().toString(36).slice(2,8); localStorage.setItem('icc_sessionId',sessionId); }
 let reservasLocais = {};
+
+// ── CAPTURA DE ERROS (mostra na tela em vez de falhar em silêncio) ──
+window.addEventListener('error', function(ev){
+  try{
+    let box=document.getElementById('js-error-banner');
+    if(!box){
+      box=document.createElement('div');
+      box.id='js-error-banner';
+      box.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#d9564b;color:#fff;padding:12px 16px;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:40vh;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.5)';
+      document.body.appendChild(box);
+    }
+    box.textContent += '❌ ERRO JS: '+ev.message+' (linha '+ev.lineno+')\n';
+  }catch(e){}
+});
 
 // ── PANEL LOCK ───────────────────────────────────────────
 function isPanelUnlocked(){
@@ -840,6 +872,7 @@ function aprovGetHoje(){
 });
 
 function aprovRenderHoje(){
+ try{
   const recs=aprovGetHoje();
   const pend=recs.filter(r=>r.status==='PENDENTE').length;
   const aprov=recs.filter(r=>r.status==='APROVADO').length;
@@ -869,6 +902,10 @@ function aprovRenderHoje(){
     return;
   }
   tbody.innerHTML=`<tr><td colspan="7">${diagHtml}</td></tr>`+recs.map(r=>aprovRowHTML(r,false)).join('');
+ }catch(e){
+   const tbody=document.getElementById('aprov-tbody-hoje');
+   if(tbody) tbody.innerHTML=`<tr><td colspan="7" style="color:#f0a99e;padding:16px">❌ Erro ao montar a lista de Aprovações: ${e.message}</td></tr>`;
+ }
 }
 
 // ── APROVAÇÕES — HISTÓRICO ────────────────────────────────
@@ -975,6 +1012,80 @@ function aprovExportCSV(){
 }
 
 // ── APROVAÇÕES — RELATÓRIO ────────────────────────────────
+
+// Agrega uma lista de registros por conferente + totais gerais.
+// Usado pelo texto do relatório, pelos gráficos e pelo export Word,
+// para garantir que os três mostrem sempre os mesmos números.
+function aprovAggregate(recs){
+  const porConf={};
+  let tDesc=0,tCarga=0,somaMin=0,comTempo=0,aprovT=0,pendT=0,reproT=0;
+  recs.forEach(r=>{
+    const c=r.conferente||'Sem Conferente';
+    if(!porConf[c]) porConf[c]={desc:0,carga:0,sep:0,sepOp:0,recOp:0,somaMin:0,comTempo:0,aprov:0,pend:0,repro:0};
+    const ti=r.tipo;
+    if(ti==='DESCARGA')        { porConf[c].desc++; tDesc++; }
+    else if(ti==='CARREGAMENTO'){ porConf[c].carga++; tCarga++; }
+    else if(ti==='SEPARAÇÃO')   porConf[c].sep++;
+    else if(ti==='SEPARAÇÃO OP')porConf[c].sepOp++;
+    else if(ti==='RECEBIMENTO OP')porConf[c].recOp++;
+    if(r.status==='APROVADO'){ porConf[c].aprov++; aprovT++; }
+    else if(r.status==='PENDENTE'){ porConf[c].pend++; pendT++; }
+    else { porConf[c].repro++; reproT++; }
+    const m=parseMin(r.data,r.horainicial,r.horafinal);
+    if(m!==null){ porConf[c].somaMin+=m; porConf[c].comTempo++; somaMin+=m; comTempo++; }
+  });
+  return {
+    porConf,
+    totals:{ total:recs.length, tDesc, tCarga, somaMin, comTempo, aprov:aprovT, pend:pendT, repro:reproT }
+  };
+}
+
+// Atalhos de período (Hoje / Ontem / 7 dias / Mês) para o relatório diário ou por período.
+function aprovSetPeriodo(tipo){
+  const hoje=new Date();
+  const fmt=d=>d.toISOString().split('T')[0];
+  let ini,fim;
+  if(tipo==='hoje'){ ini=fim=fmt(hoje); }
+  else if(tipo==='ontem'){ const o=new Date(hoje); o.setDate(o.getDate()-1); ini=fim=fmt(o); }
+  else if(tipo==='7dias'){ const i=new Date(hoje); i.setDate(i.getDate()-6); ini=fmt(i); fim=fmt(hoje); }
+  else if(tipo==='mes'){ const i=new Date(hoje.getFullYear(),hoje.getMonth(),1); ini=fmt(i); fim=fmt(hoje); }
+  else return;
+  document.getElementById('af-rel-ini').value=ini;
+  document.getElementById('af-rel-fim').value=fim;
+  aprovBuildReport();
+}
+
+// Desenha os gráficos de desempenho (quantidade por conferente + status) para o período filtrado.
+function aprovRenderRelCharts(recs){
+  if(typeof Chart==='undefined') return;
+  const elQtd=document.getElementById('chartRelQtd');
+  const elStatus=document.getElementById('chartRelStatus');
+  if(!elQtd||!elStatus) return;
+
+  const agg=aprovAggregate(recs);
+  const confs=Object.keys(agg.porConf).sort();
+
+  if(chartRelQtd) chartRelQtd.destroy();
+  chartRelQtd=new Chart(elQtd.getContext('2d'),{
+    type:'bar',
+    data:{labels:confs.length?confs:['Sem dados'],datasets:[
+      {label:'Descargas',data:confs.length?confs.map(c=>agg.porConf[c].desc):[0],backgroundColor:'#4a90d9'},
+      {label:'Cargas',data:confs.length?confs.map(c=>agg.porConf[c].carga):[0],backgroundColor:'#d9564b'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      scales:{y:{beginAtZero:true,ticks:{precision:0}}},
+      plugins:{legend:{position:'bottom'},title:{display:true,text:'Quantidade por Conferente',color:'#333'}}}
+  });
+
+  if(chartRelStatus) chartRelStatus.destroy();
+  chartRelStatus=new Chart(elStatus.getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Aprovados','Pendentes','Reprovados'],datasets:[{data:[agg.totals.aprov,agg.totals.pend,agg.totals.repro],backgroundColor:['#34c281','#d4af37','#d9564b']}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{position:'bottom'},title:{display:true,text:'Status das Operações',color:'#333'}}}
+  });
+}
+
 function aprovBuildReport(){
   const ini=document.getElementById('af-rel-ini').value;
   const fim=document.getElementById('af-rel-fim').value;
@@ -992,24 +1103,8 @@ function aprovBuildReport(){
 
   const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'?';
   const per=ini===fim?fmtD(ini):`${fmtD(ini)} a ${fmtD(fim)}`;
-
-  const porConf={};
-  let tDesc=0,tCarga=0,somaMin=0,comTempo=0;
-  recs.forEach(r=>{
-    const c=r.conferente||'Sem Conferente';
-    if(!porConf[c]) porConf[c]={desc:0,carga:0,sep:0,sepOp:0,recOp:0,somaMin:0,comTempo:0,aprov:0,pend:0,repro:0};
-    const ti=r.tipo;
-    if(ti==='DESCARGA')        { porConf[c].desc++; tDesc++; }
-    else if(ti==='CARREGAMENTO'){ porConf[c].carga++; tCarga++; }
-    else if(ti==='SEPARAÇÃO')   porConf[c].sep++;
-    else if(ti==='SEPARAÇÃO OP')porConf[c].sepOp++;
-    else if(ti==='RECEBIMENTO OP')porConf[c].recOp++;
-    if(r.status==='APROVADO') porConf[c].aprov++;
-    else if(r.status==='PENDENTE') porConf[c].pend++;
-    else porConf[c].repro++;
-    const m=parseMin(r.data,r.horainicial,r.horafinal);
-    if(m!==null){ porConf[c].somaMin+=m; porConf[c].comTempo++; somaMin+=m; comTempo++; }
-  });
+  const agg=aprovAggregate(recs);
+  const {porConf,totals}=agg;
 
   let txt=`╔══════════════════════════════════════╗\n`;
   txt+=`║   ICC — RELATÓRIO LOGÍSTICO          ║\n`;
@@ -1018,10 +1113,11 @@ function aprovBuildReport(){
   txt+=`Filtro  : ${st||'Todos os status'}${conf?' | Conf: '+conf:''}\n`;
   txt+=`Gerado  : ${new Date().toLocaleString('pt-BR')}\n`;
   txt+=`\n── RESUMO GERAL ───────────────────────\n`;
-  txt+=`Total de operações : ${recs.length}\n`;
-  txt+=`Descargas          : ${tDesc}\n`;
-  txt+=`Carregamentos      : ${tCarga}\n`;
-  txt+=`Tempo médio geral  : ${comTempo?Math.round(somaMin/comTempo)+' min':'--'}\n`;
+  txt+=`Total de operações : ${totals.total}\n`;
+  txt+=`Descargas          : ${totals.tDesc}\n`;
+  txt+=`Carregamentos      : ${totals.tCarga}\n`;
+  txt+=`Tempo médio geral  : ${totals.comTempo?Math.round(totals.somaMin/totals.comTempo)+' min':'--'}\n`;
+  txt+=`✅ Aprovados: ${totals.aprov}   ⏳ Pendentes: ${totals.pend}   ❌ Reprovados: ${totals.repro}\n`;
   const confs=Object.keys(porConf).sort();
   if(confs.length){
     txt+=`\n── POR CONFERENTE ─────────────────────\n`;
@@ -1040,6 +1136,9 @@ function aprovBuildReport(){
   }
   txt+=`\n═══════════════════════════════════════\n`;
   document.getElementById('aprov-rel-txt').value=txt;
+
+  aprovRenderRelCharts(recs);
+  setAprovMsg('aprov-rel-status','✅ Relatório gerado com '+totals.total+' registro(s). Gráficos atualizados.',true);
 }
 
 function aprovSendWA(){
