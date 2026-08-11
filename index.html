@@ -530,8 +530,8 @@
     }
 
     // ── APROVAR / REPROVAR ─────────────────────────────────
-    // O Apps Script usa doGet com ?acao=aprovar&id=ID&token=TOKEN
-    // (doPost não trata a aba "Aprovacoes" — chama aprovarPendente_/reprovarPendente_)
+    // Usa POST com { _acao, _id, _token } — tratado diretamente no doPost
+    // do Apps Script, sem problema de redirect que afeta o doGet.
     const ADMIN_TOKEN = "1234";
 
     async function enviarAcao(id, status, btnEl) {
@@ -541,60 +541,44 @@
       if (repBtn) repBtn.disabled = true;
       if (btnEl)  btnEl.textContent = "…";
 
-      const acao = status === "APROVADO" ? "aprovar" : "reprovar";
-      const url  = `${WEB_APP_URL}?acao=${acao}&id=${encodeURIComponent(id)}&token=${ADMIN_TOKEN}&t=${Date.now()}`;
+      const payload = JSON.stringify({
+        _acao:  status === "APROVADO" ? "aprovar" : "reprovar",
+        _id:    id,
+        _token: ADMIN_TOKEN
+      });
 
       try {
-        // Apps Script com CORS: usa no-cors para GET via fetch
-        // mas precisamos da resposta → usamos jsonp via iframe trick
-        // ou simplesmente fetch normal (Apps Script permite GET cross-origin)
-        const resp = await fetch(url);
-        const json = await resp.json();
+        // Apps Script aceita POST cross-origin mas responde com redirect opaco.
+        // Por isso enviamos no-cors (fire-and-forget) e assumimos sucesso otimista,
+        // depois recarregamos para confirmar o resultado real da planilha.
+        await fetch(WEB_APP_URL, {
+          method:  "POST",
+          mode:    "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body:    payload
+        });
 
-        if (json.ok === false) {
-          throw new Error(json.erro || json.mensagem || "Erro desconhecido");
-        }
-
-        // Atualiza localmente (otimista)
+        // Atualiza localmente de forma otimista
         const reg = pendentes.find(p => p.id === id);
         if (reg) reg.status = status;
-
         renderizarCards(aplicarFiltros());
         renderizarPendentes();
 
         showToast(
-          status === "APROVADO" ? "✅ Aprovado com sucesso!" : "🚫 Reprovado com sucesso!",
           status === "APROVADO"
+            ? "✅ Aprovado! Atualizando..."
+            : "🚫 Reprovado! Atualizando...",
+          true
         );
 
-        // Recarrega dados após 2 s para sincronizar com a planilha
-        setTimeout(carregarDados, 2000);
+        // Recarrega após 3 s para refletir o estado real da planilha
+        setTimeout(carregarDados, 3000);
 
       } catch (err) {
-        // Se o fetch falhar por CORS (modo opaque), tenta via no-cors como fallback
-        // e assume sucesso otimista, pois o Apps Script já processou
-        if (err.message && err.message.toLowerCase().includes("failed to fetch")) {
-          // Fallback no-cors: dispara e assume sucesso
-          fetch(url, { mode: "no-cors" }).catch(() => {});
-
-          const reg = pendentes.find(p => p.id === id);
-          if (reg) reg.status = status;
-
-          renderizarCards(aplicarFiltros());
-          renderizarPendentes();
-
-          showToast(
-            (status === "APROVADO" ? "✅ Aprovado" : "🚫 Reprovado") + " (confirmação pendente — atualize em instantes)",
-            true
-          );
-          setTimeout(carregarDados, 3000);
-
-        } else {
-          showToast("Erro: " + err.message, false);
-          if (aprBtn) aprBtn.disabled = false;
-          if (repBtn) repBtn.disabled = false;
-          if (btnEl)  btnEl.textContent = status === "APROVADO" ? "Aprovar" : "Reprovar";
-        }
+        showToast("Erro ao enviar: " + err.message, false);
+        if (aprBtn) aprBtn.disabled = false;
+        if (repBtn) repBtn.disabled = false;
+        if (btnEl)  btnEl.textContent = status === "APROVADO" ? "Aprovar" : "Reprovar";
       }
     }
 
