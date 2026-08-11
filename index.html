@@ -57,11 +57,8 @@
       border: 1px solid var(--border);
     }
     button.approve { background: var(--green); color: #07140c; }
-    button.reject  { background: var(--red); color: #fff; }
-    button.small   { padding: 7px 9px; font-size: 12px; margin-right: 4px; }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-
-    /* toast / loading */
+    button.reject { background: var(--red); color: #fff; }
+    button.small { padding: 7px 9px; font-size: 12px; margin-right: 4px; }
     .loading {
       display: none;
       padding: 14px;
@@ -73,23 +70,6 @@
       white-space: pre-wrap;
     }
     .error { color: var(--red); }
-
-    /* toast notification */
-    #toast {
-      position: fixed;
-      bottom: 28px;
-      right: 28px;
-      padding: 12px 20px;
-      border-radius: 12px;
-      font-weight: bold;
-      font-size: 14px;
-      z-index: 9999;
-      display: none;
-      transition: opacity .3s;
-    }
-    #toast.ok  { background: var(--green); color: #07140c; }
-    #toast.err { background: var(--red);   color: #fff; }
-
     .cards {
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -103,15 +83,24 @@
       padding: 14px;
       min-height: 94px;
     }
-    .card span   { display: block; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
     .card strong { font-size: 25px; }
-    .card small  { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
-    .green strong  { color: var(--green); }
-    .red strong    { color: var(--red); }
-    .blue strong   { color: var(--blue); }
-    .gold strong   { color: var(--accent); }
+    .card small {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .green strong { color: var(--green); }
+    .red strong { color: var(--red); }
+    .blue strong { color: var(--blue); }
+    .gold strong { color: var(--accent); }
     .purple strong { color: var(--purple); }
-
     .section {
       background: var(--card);
       border: 1px solid var(--border);
@@ -128,7 +117,6 @@
       margin-bottom: 12px;
     }
     .section h2 { margin: 0; font-size: 17px; }
-
     .filters {
       display: grid;
       grid-template-columns: repeat(7, minmax(130px, 1fr));
@@ -139,7 +127,12 @@
       padding: 14px;
       margin-bottom: 16px;
     }
-    label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
     input, select {
       width: 100%;
       background: #111614;
@@ -149,7 +142,6 @@
       padding: 9px;
       outline: none;
     }
-
     .charts {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -182,10 +174,19 @@
       min-height: 500px;
       position: relative;
     }
-    .chart-inner canvas { height: 100% !important; max-height: none !important; }
-
-    .table-wrap { overflow: auto; max-height: 470px; }
-    table { width: 100%; border-collapse: collapse; min-width: 1250px; }
+    .chart-inner canvas {
+      height: 100% !important;
+      max-height: none !important;
+    }
+    .table-wrap {
+      overflow: auto;
+      max-height: 470px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1250px;
+    }
     th, td {
       padding: 9px;
       border-bottom: 1px solid var(--border);
@@ -208,13 +209,11 @@
       border: 1px solid var(--border);
       font-size: 12px;
     }
-    .pill-pendente  { color: var(--accent); }
-    .pill-aprovado  { color: var(--green);  }
-    .pill-reprovado { color: var(--red);    }
+    .pill-pendente { color: var(--accent); }
     .empty { color: var(--muted); padding: 14px; }
 
     @media (max-width: 1200px) {
-      .cards   { grid-template-columns: repeat(4, 1fr); }
+      .cards { grid-template-columns: repeat(4, 1fr); }
       .filters { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 850px) {
@@ -229,7 +228,6 @@
   </style>
 </head>
 <body>
-  <div id="toast"></div>
   <div class="app">
     <div class="topbar">
       <div>
@@ -256,7 +254,6 @@
       <div class="card"><span>Tempo total</span><strong id="kTempoTotal">0 min</strong></div>
     </div>
 
-    <!-- SEÇÃO PENDENTES -->
     <div class="section">
       <div class="section-head">
         <h2>Aprovação de pendentes</h2>
@@ -277,18 +274,16 @@
       </div>
     </div>
 
-    <!-- FILTROS -->
     <div class="filters">
       <div><label>Data inicial</label><input type="date" id="fDataIni" onchange="renderizar()"></div>
-      <div><label>Data final</label>  <input type="date" id="fDataFim" onchange="renderizar()"></div>
+      <div><label>Data final</label><input type="date" id="fDataFim" onchange="renderizar()"></div>
       <div><label>Módulo</label><select id="fModulo" onchange="renderizar()"><option value="">Todos</option></select></div>
       <div><label>Conferente</label><select id="fConferente" onchange="renderizar()"><option value="">Todos</option></select></div>
-      <div><label>Operador</label>  <select id="fOperador"   onchange="renderizar()"><option value="">Todos</option></select></div>
-      <div><label>Motorista</label> <select id="fMotorista"  onchange="renderizar()"><option value="">Todos</option></select></div>
+      <div><label>Operador</label><select id="fOperador" onchange="renderizar()"><option value="">Todos</option></select></div>
+      <div><label>Motorista</label><select id="fMotorista" onchange="renderizar()"><option value="">Todos</option></select></div>
       <div><label>Busca</label><input type="text" id="fBusca" oninput="renderizar()" placeholder="NF, romaneio, cliente..."></div>
     </div>
 
-    <!-- GRÁFICOS -->
     <div class="charts">
       <div class="chart-box"><h3>Operações por data</h3><canvas id="chartData"></canvas></div>
       <div class="chart-box"><h3>Tempo médio por módulo</h3><canvas id="chartTempoModulo"></canvas></div>
@@ -300,7 +295,6 @@
       </div>
     </div>
 
-    <!-- TABELA APROVADOS -->
     <div class="section">
       <div class="section-head">
         <h2>Registros aprovados</h2>
@@ -326,19 +320,8 @@
 
     let registros = [];
     let pendentes = [];
-    let graficos  = {};
+    let graficos = {};
 
-    // ── TOAST ──────────────────────────────────────────────
-    function showToast(msg, ok = true) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className = ok ? 'ok' : 'err';
-      t.style.display = 'block';
-      t.style.opacity = '1';
-      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.style.display = 'none', 300); }, 3000);
-    }
-
-    // ── CARREGAR DADOS ─────────────────────────────────────
     function carregarDados() {
       mostrarLoading("Carregando dados...");
       fetch(WEB_APP_URL + "?t=" + Date.now())
@@ -363,20 +346,20 @@
           const item = {
             id: aba + "-" + i,
             aba,
-            data:       r.data || "",
-            dataISO:    converterDataISO(r.data),
+            data: r.data || "",
+            dataISO: converterDataISO(r.data),
             conferente: r.conferente || "",
-            operador:   r.operador || "",
-            motorista:  r.motorista || "",
-            nf:         r.nf || "",
-            romaneio:   r.romaneio || "",
-            cliente:    r.cliente || r.empresa || "",
-            baia:       r.baia || "",
+            operador: r.operador || "",
+            motorista: r.motorista || "",
+            nf: r.nf || "",
+            romaneio: r.romaneio || "",
+            cliente: r.cliente || r.empresa || "",
+            baia: r.baia || "",
             tipoStatus: r.tipo || r.status || "",
             quantidade: Number(r.quantidade) || 0,
             horainicial: r.horainicial || "",
-            horafinal:   r.horafinal || "",
-            duracaoMin:  calcularDuracaoMinutos(r.horainicial, r.horafinal)
+            horafinal: r.horafinal || "",
+            duracaoMin: calcularDuracaoMinutos(r.horainicial, r.horafinal)
           };
           const chave = JSON.stringify(item);
           if (vistos[chave]) return;
@@ -389,12 +372,12 @@
 
     function normalizarPendentes(dados) {
       return (dados.Pendentes || []).map(p => ({
-        id:               p.id,
-        status:           p.status,
-        destino_aba:      p.destino_aba,
+        id: p.id,
+        status: p.status,
+        destino_aba: p.destino_aba,
         data_solicitacao: p.data_solicitacao,
         hora_solicitacao: p.hora_solicitacao,
-        payload:          JSON.parse(p.payload_json || "{}")
+        payload: JSON.parse(p.payload_json || "{}")
       }));
     }
 
@@ -420,12 +403,11 @@
       return Number(p[0]) * 60 + Number(p[1]);
     }
 
-    // ── FILTROS ────────────────────────────────────────────
     function montarFiltros() {
-      preencherSelect("fModulo",     [...new Set(registros.map(r => r.aba))]);
+      preencherSelect("fModulo", [...new Set(registros.map(r => r.aba))]);
       preencherSelect("fConferente", [...new Set(registros.map(r => r.conferente))]);
-      preencherSelect("fOperador",   [...new Set(registros.map(r => r.operador))]);
-      preencherSelect("fMotorista",  [...new Set(registros.map(r => r.motorista))]);
+      preencherSelect("fOperador", [...new Set(registros.map(r => r.operador))]);
+      preencherSelect("fMotorista", [...new Set(registros.map(r => r.motorista))]);
     }
 
     function preencherSelect(id, valores) {
@@ -434,13 +416,13 @@
       sel.innerHTML = `<option value="">Todos</option>`;
       valores.filter(v => v).sort().forEach(v => {
         const opt = document.createElement("option");
-        opt.value = v; opt.textContent = v;
+        opt.value = v;
+        opt.textContent = v;
         sel.appendChild(opt);
       });
       sel.value = atual;
     }
 
-    // ── RENDERIZAR ─────────────────────────────────────────
     function renderizar() {
       const filtrados = aplicarFiltros();
       renderizarCards(filtrados);
@@ -450,21 +432,21 @@
     }
 
     function aplicarFiltros() {
-      const di    = document.getElementById("fDataIni").value;
-      const df    = document.getElementById("fDataFim").value;
-      const mod   = document.getElementById("fModulo").value;
-      const conf  = document.getElementById("fConferente").value;
-      const op    = document.getElementById("fOperador").value;
-      const mot   = document.getElementById("fMotorista").value;
+      const di = document.getElementById("fDataIni").value;
+      const df = document.getElementById("fDataFim").value;
+      const mod = document.getElementById("fModulo").value;
+      const conf = document.getElementById("fConferente").value;
+      const op = document.getElementById("fOperador").value;
+      const mot = document.getElementById("fMotorista").value;
       const busca = document.getElementById("fBusca").value.toLowerCase();
 
       return registros.filter(r => {
         if (di && r.dataISO < di) return false;
         if (df && r.dataISO > df) return false;
-        if (mod  && r.aba        !== mod)  return false;
+        if (mod && r.aba !== mod) return false;
         if (conf && r.conferente !== conf) return false;
-        if (op   && r.operador   !== op)   return false;
-        if (mot  && r.motorista  !== mot)  return false;
+        if (op && r.operador !== op) return false;
+        if (mot && r.motorista !== mot) return false;
         if (busca) {
           const texto = Object.values(r).join(" ").toLowerCase();
           if (!texto.includes(busca)) return false;
@@ -476,11 +458,11 @@
     function renderizarCards(lista) {
       const tempoTotal = lista.reduce((s, r) => s + r.duracaoMin, 0);
       const tempoMedio = lista.length ? Math.round(tempoTotal / lista.length) : 0;
-      const qtd        = lista.reduce((s, r) => s + r.quantidade, 0);
+      const qtd = lista.reduce((s, r) => s + r.quantidade, 0);
 
-      document.getElementById("kTotal").textContent     = lista.length;
-      document.getElementById("kPendentes").textContent  = pendentes.filter(p => p.status === "PENDENTE").length;
-      document.getElementById("kAprovados").textContent  = pendentes.filter(p => p.status === "APROVADO").length;
+      document.getElementById("kTotal").textContent = lista.length;
+      document.getElementById("kPendentes").textContent = pendentes.filter(p => p.status === "PENDENTE").length;
+      document.getElementById("kAprovados").textContent = pendentes.filter(p => p.status === "APROVADO").length;
       document.getElementById("kReprovados").textContent = pendentes.filter(p => p.status === "REPROVADO").length;
       document.getElementById("kDuplicados").textContent = 0;
       document.getElementById("kQuantidade").textContent = qtd;
@@ -488,7 +470,6 @@
       document.getElementById("kTempoTotal").textContent = tempoTotal + " min";
     }
 
-    // ── RENDERIZAR PENDENTES ───────────────────────────────
     function renderizarPendentes() {
       const tbody = document.getElementById("tbodyPendentes");
       tbody.innerHTML = "";
@@ -502,14 +483,12 @@
 
       lista.forEach(p => {
         const r = p.payload;
-        const dur = calcularDuracaoMinutos(r.horainicial, r.horafinal);
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td><span class="pill pill-pendente">${p.status}</span></td>
-          <td>${p.destino_aba || ""}</td>
-          <td>${p.data_solicitacao || ""}</td>
+          <td>${p.destino_aba}</td>
+          <td>${p.data_solicitacao}</td>
           <td>${r.data || ""}</td>
-          <td>${p.hora_solicitacao || ""}</td>
           <td>${r.conferente || ""}</td>
           <td>${r.operador || ""}</td>
           <td>${r.baia || ""}</td>
@@ -520,78 +499,22 @@
           <td>${r.tipo || r.status || ""}</td>
           <td>${r.horainicial || ""}</td>
           <td>${r.horafinal || ""}</td>
-          <td>${dur ? dur + " min" : ""}</td>
+          <td>${r.duracaoMin ? r.duracaoMin + " min" : ""}</td>
           <td>
-            <button class="approve small" id="btn-apr-${p.id}" onclick="aprovar('${p.id}', this)">Aprovar</button>
-            <button class="reject small"  id="btn-rep-${p.id}" onclick="reprovar('${p.id}', this)">Reprovar</button>
-          </td>`;
+            <button class="approve small" onclick="aprovar('${p.id}')">Aprovar</button>
+            <button class="reject small" onclick="reprovar('${p.id}')">Reprovar</button>
+          </td>
+        `;
         tbody.appendChild(tr);
       });
     }
 
-    // ── APROVAR / REPROVAR ─────────────────────────────────
-    // Usa POST com { _acao, _id, _token } — tratado diretamente no doPost
-    // do Apps Script, sem problema de redirect que afeta o doGet.
-    const ADMIN_TOKEN = "1234";
-
-    async function enviarAcao(id, status, btnEl) {
-      const aprBtn = document.getElementById("btn-apr-" + id);
-      const repBtn = document.getElementById("btn-rep-" + id);
-      if (aprBtn) aprBtn.disabled = true;
-      if (repBtn) repBtn.disabled = true;
-      if (btnEl)  btnEl.textContent = "…";
-
-      const payload = JSON.stringify({
-        _acao:  status === "APROVADO" ? "aprovar" : "reprovar",
-        _id:    id,
-        _token: ADMIN_TOKEN
-      });
-
-      try {
-        // Apps Script aceita POST cross-origin mas responde com redirect opaco.
-        // Por isso enviamos no-cors (fire-and-forget) e assumimos sucesso otimista,
-        // depois recarregamos para confirmar o resultado real da planilha.
-        await fetch(WEB_APP_URL, {
-          method:  "POST",
-          mode:    "no-cors",
-          headers: { "Content-Type": "text/plain" },
-          body:    payload
-        });
-
-        // Atualiza localmente de forma otimista
-        const reg = pendentes.find(p => p.id === id);
-        if (reg) reg.status = status;
-        renderizarCards(aplicarFiltros());
-        renderizarPendentes();
-
-        showToast(
-          status === "APROVADO"
-            ? "✅ Aprovado! Atualizando..."
-            : "🚫 Reprovado! Atualizando...",
-          true
-        );
-
-        // Recarrega após 3 s para refletir o estado real da planilha
-        setTimeout(carregarDados, 3000);
-
-      } catch (err) {
-        showToast("Erro ao enviar: " + err.message, false);
-        if (aprBtn) aprBtn.disabled = false;
-        if (repBtn) repBtn.disabled = false;
-        if (btnEl)  btnEl.textContent = status === "APROVADO" ? "Aprovar" : "Reprovar";
-      }
-    }
-
-    function aprovar(id, btn)  { enviarAcao(id, "APROVADO",  btn); }
-    function reprovar(id, btn) { enviarAcao(id, "REPROVADO", btn); }
-
-    // ── TABELA APROVADOS ───────────────────────────────────
     function renderizarTabelaAprovados(lista) {
       const tbody = document.getElementById("tbodyAprovados");
       tbody.innerHTML = "";
       document.getElementById("tableCount").textContent = lista.length + " registros";
 
-      lista.slice().sort((a, b) => b.dataISO.localeCompare(a.dataISO)).forEach(r => {
+      lista.slice().sort((a,b) => b.dataISO.localeCompare(a.dataISO)).forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${r.data}</td>
@@ -607,18 +530,18 @@
           <td>${r.quantidade || ""}</td>
           <td>${r.horainicial}</td>
           <td>${r.horafinal}</td>
-          <td>${r.duracaoMin ? r.duracaoMin + " min" : ""}</td>`;
+          <td>${r.duracaoMin ? r.duracaoMin + " min" : ""}</td>
+        `;
         tbody.appendChild(tr);
       });
     }
 
-    // ── GRÁFICOS ───────────────────────────────────────────
     function renderizarGraficos(lista) {
-      criarGraficoBarra("chartData",            agruparPorData(lista),                      "#C8A24A");
-      criarGraficoBarra("chartTempoModulo",     tempoMedioPorCampo(lista, "aba"),            "#42C77B");
+      criarGraficoBarra("chartData", agruparPorData(lista), "#C8A24A");
+      criarGraficoBarra("chartTempoModulo", tempoMedioPorCampo(lista, "aba"), "#42C77B");
       criarGraficoBarra("chartTempoConferente", tempoMedioPorCampo(lista, "conferente", 10), "#4EA3F1");
-      criarGraficoBarra("chartTempoMotorista",  tempoTotalPorMotorista(lista, 10),           "#E05A5A");
-      criarGraficoHorizontal("chartTempoCada",  tempoCadaOperacaoPorMotorista(lista),        "#A277FF");
+      criarGraficoBarra("chartTempoMotorista", tempoTotalPorMotorista(lista, 10), "#E05A5A");
+      criarGraficoHorizontal("chartTempoCada", tempoCadaOperacaoPorMotorista(lista), "#A277FF");
     }
 
     function criarGraficoBarra(id, dados, cor) {
@@ -655,17 +578,15 @@
         obj[chave].soma += r.duracaoMin;
         obj[chave].qtd++;
       });
-      let arr = Object.entries(obj).map(([k, v]) => [k, Math.round(v.soma / v.qtd)]).sort((a, b) => b[1] - a[1]);
+      let arr = Object.entries(obj).map(([k, v]) => [k, Math.round(v.soma / v.qtd)]).sort((a,b) => b[1]-a[1]);
       if (limite) arr = arr.slice(0, limite);
       return { labels: arr.map(i => i[0]), valores: arr.map(i => i[1]) };
     }
 
     function tempoTotalPorMotorista(lista, limite) {
       const obj = {};
-      lista.forEach(r => {
-        if (r.duracaoMin) obj[r.motorista || "Sem motorista"] = (obj[r.motorista || "Sem motorista"] || 0) + r.duracaoMin;
-      });
-      let arr = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+      lista.forEach(r => { if (r.duracaoMin) obj[r.motorista || "Sem motorista"] = (obj[r.motorista || "Sem motorista"] || 0) + r.duracaoMin; });
+      let arr = Object.entries(obj).sort((a,b) => b[1]-a[1]);
       if (limite) arr = arr.slice(0, limite);
       return { labels: arr.map(i => i[0]), valores: arr.map(i => i[1]) };
     }
@@ -678,34 +599,19 @@
       return { labels: arr.map(i => i[0]), valores: arr.map(i => i[1]) };
     }
 
-    // ── UTILITÁRIOS ────────────────────────────────────────
     function limparFiltros() {
-      ["fDataIni","fDataFim","fModulo","fConferente","fOperador","fMotorista","fBusca"]
-        .forEach(id => document.getElementById(id).value = "");
+      ["fDataIni","fDataFim","fModulo","fConferente","fOperador","fMotorista","fBusca"].forEach(id => document.getElementById(id).value = "");
       renderizar();
     }
 
     function exportarCSV() {
-      const filtrados = aplicarFiltros();
-      if (!filtrados.length) { showToast("Nenhum registro para exportar.", false); return; }
-      const header = ["Data","Módulo","Conferente","Operador","Baia","Tipo","Romaneio","NF","Cliente","Motorista","Qtd","Início","Final","Tempo (min)"];
-      const rows = filtrados.map(r => [
-        r.data, r.aba, r.conferente, r.operador, r.baia, r.tipoStatus,
-        r.romaneio, r.nf, r.cliente, r.motorista, r.quantidade,
-        r.horainicial, r.horafinal, r.duracaoMin
-      ].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`));
-      const csv = [header.join(";"), ...rows.map(r => r.join(";"))].join("\n");
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `logistico_icc_${new Date().toISOString().split("T")[0]}.csv`;
-      a.click();
+      alert("Função de exportar CSV ainda não implementada nesta versão.");
     }
 
     function mostrarLoading(msg, erro = false) {
       const el = document.getElementById("loading");
       el.style.display = "block";
-      el.textContent   = msg;
+      el.textContent = msg;
       el.classList.toggle("error", erro);
     }
 
@@ -713,7 +619,14 @@
       document.getElementById("loading").style.display = "none";
     }
 
-    // ── INIT ───────────────────────────────────────────────
+    function aprovar(id) {
+      alert("Função de aprovação precisa ser implementada no Apps Script.");
+    }
+
+    function reprovar(id) {
+      alert("Função de reprovação precisa ser implementada no Apps Script.");
+    }
+
     carregarDados();
   </script>
 </body>
